@@ -115,4 +115,42 @@ export default function EventCalendar({ events }: { events: any[] }) {
       </div>
 
       {/* 選択した日のスケジュール表示 */}
-      <div className="rounded-[32px] bg-white p-6
+      <div className="rounded-[32px] bg-white p-6 border border-slate-100 shadow-sm transition-all animate-in fade-in slide-in-from-top-2">
+        <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-300 mb-4 flex justify-between items-center">
+          {/* 日付表示を日本語に */}
+          <span>Schedule / {selectedDate ? format(selectedDate, "M月d日", { locale: ja }) : "Select Date"}</span>
+          <span className="text-lime-600 italic">[{selectedDateEvents.length} Items]</span>
+        </h3>
+        
+        <div className="space-y-3">
+          {selectedDateEvents.length > 0 ? (
+            selectedDateEvents.map((event) => {
+              // 時間のズレを防ぐ補正
+              const isUTC = event.start_at.includes('Z') || event.start_at.includes('+');
+              const safeDateString = isUTC ? event.start_at : event.start_at + '+09:00';
+              const eventDate = new Date(safeDateString);
+
+              return (
+                <div key={event.id} className="flex flex-col gap-1 border-l-4 border-slate-900 pl-4 py-1">
+                  <span className="text-[8px] font-black uppercase tracking-widest text-lime-600">
+                    {event.category}
+                  </span>
+                  <p className="text-xs font-black text-slate-900 leading-tight">
+                    {event.title}
+                  </p>
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
+                    Time : {format(eventDate, "HH:mm")} / Loc : {event.location}
+                  </p>
+                </div>
+              );
+            })
+          ) : (
+            <p className="text-[9px] font-black text-slate-200 uppercase tracking-[0.4em] text-center py-4">
+              No Events
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
