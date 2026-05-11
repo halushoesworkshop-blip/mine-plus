@@ -36,7 +36,6 @@ export default function EventCalendar({ events }: { events: any[] }) {
   const startDate = startOfWeek(monthStart);
   const endDate = endOfWeek(monthEnd);
 
-  // 選択された日のイベントを取得
   const selectedDateEvents = selectedDate
     ? events.filter((e) => isSameDay(parseISO(e.start_at), selectedDate))
     : [];
@@ -52,8 +51,9 @@ export default function EventCalendar({ events }: { events: any[] }) {
           >
             Prev
           </button>
-          <span className="text-xs font-black uppercase tracking-[0.3em] text-slate-900">
-            {format(currentMonth, "MMMM yyyy")}
+          {/* 月の表示を日本語に（例：2026年 5月） */}
+          <span className="text-sm font-black tracking-widest text-slate-900">
+            {format(currentMonth, "yyyy年 M月", { locale: ja })}
           </span>
           <button
             onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
@@ -63,8 +63,9 @@ export default function EventCalendar({ events }: { events: any[] }) {
           </button>
         </div>
         <div className="grid grid-cols-7 bg-slate-50/50">
-          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, i) => (
-            <div key={i} className="py-3 text-center text-[8px] font-black uppercase tracking-widest text-slate-300">
+          {/* 曜日を日本語に */}
+          {["日", "月", "火", "水", "木", "金", "土"].map((day, i) => (
+            <div key={i} className={`py-3 text-center text-[10px] font-black text-slate-400 ${i === 0 ? "text-rose-400" : i === 6 ? "text-sky-400" : ""}`}>
               {day}
             </div>
           ))}
@@ -113,35 +114,5 @@ export default function EventCalendar({ events }: { events: any[] }) {
         </div>
       </div>
 
-      {/* 選択された日のイベントを表示するエリア */}
-      <div className="rounded-[32px] bg-white p-6 border border-slate-100 shadow-sm transition-all animate-in fade-in slide-in-from-top-2">
-        <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-300 mb-4 flex justify-between items-center">
-          <span>Schedule / {selectedDate ? format(selectedDate, "MMM dd") : "Select Date"}</span>
-          <span className="text-lime-600 italic">[{selectedDateEvents.length} Items]</span>
-        </h3>
-        
-        <div className="space-y-3">
-          {selectedDateEvents.length > 0 ? (
-            selectedDateEvents.map((event) => (
-              <div key={event.id} className="flex flex-col gap-1 border-l-4 border-slate-900 pl-4 py-1">
-                <span className="text-[8px] font-black uppercase tracking-widest text-lime-600">
-                  {event.category}
-                </span>
-                <p className="text-xs font-black text-slate-900 leading-tight">
-                  {event.title}
-                </p>
-                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
-                  Time : {format(parseISO(event.start_at), "HH:mm")} / Loc : {event.location}
-                </p>
-              </div>
-            ))
-          ) : (
-            <p className="text-[9px] font-black text-slate-200 uppercase tracking-[0.4em] text-center py-4">
-              No Events
-            </p>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
+      {/* 選択した日のスケジュール表示 */}
+      <div className="rounded-[32px] bg-white p-6
