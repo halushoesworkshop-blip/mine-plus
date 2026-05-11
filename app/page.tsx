@@ -6,11 +6,20 @@ import DeleteButton from "@/components/DeleteButton";
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 
+// 時間のズレと抜けを両方防ぐ最強のフォーマット関数
 function formatEventDate(dateString: string) {
-  const date = new Date(dateString);
-  return date.toLocaleDateString("ja-JP", {
-    month: "short", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit",
-  });
+  const isUTC = dateString.includes('Z') || dateString.includes('+');
+  const safeDateString = isUTC ? dateString : dateString + '+09:00';
+  const date = new Date(safeDateString);
+
+  return new Intl.DateTimeFormat("ja-JP", {
+    timeZone: "Asia/Tokyo",
+    month: "short",
+    day: "numeric",
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
 }
 
 export default async function Home(props: { searchParams: Promise<{ category?: string }> }) {
@@ -20,12 +29,15 @@ export default async function Home(props: { searchParams: Promise<{ category?: s
   const searchParams = await props.searchParams;
   const selectedCategory = searchParams.category;
 
-  let query = supabase.from("events").select("*").order("start_at", { ascending: true });
-  if (selectedCategory) {
-    query = query.eq("category", selectedCategory);
-  }
-  const { data: events } = await query;
-  const upcomingEvents = events || [];
+  // 1. すべてのイベントを取得（件数表示用）
+  const { data: allEventsData } = await supabase.from("events").select("*").order("start_at", { ascending: true });
+  const allEvents = allEventsData || [];
+  
+  // 2. 選択されたカテゴリで絞り込む（リスト・カレンダー表示用）
+  const filteredEvents = selectedCategory 
+    ? allEvents.filter(event => event.category === selectedCategory)
+    : allEvents;
+
   const { count: totalUserCount } = await supabase.from("profiles").select("*", { count: "exact", head: true });
 
   return (
@@ -54,7 +66,7 @@ export default async function Home(props: { searchParams: Promise<{ category?: s
           )}
         </nav>
 
-        {/* ヒーローセクション（宿泊の文言を削除） */}
+        {/* ヒーローセクション */}
         <section className="relative overflow-hidden rounded-[48px] bg-yellow-400 p-12 md:p-24 flex flex-col items-center text-center shadow-2xl shadow-yellow-400/20">
           <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.4)_0%,transparent_60%)] pointer-events-none" />
           <h1 className="text-6xl font-black md:text-[110px] tracking-tighter text-slate-900 leading-[0.8] mb-8 uppercase">MINE<span className="opacity-20">+</span></h1>
@@ -73,7 +85,7 @@ export default async function Home(props: { searchParams: Promise<{ category?: s
             <div className="grid grid-cols-2 lg:grid-cols-1 gap-4">
               <div className="rounded-[32px] bg-white p-8 shadow-sm border border-slate-100 group transition-all hover:border-lime-500">
                 <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-300 mb-3">Upcoming</p>
-                <p className="text-5xl font-black text-slate-900 tracking-tighter">{upcomingEvents.length}<span className="text-[10px] font-black text-lime-600 ml-2 uppercase tracking-widest">Events</span></p>
+                <p className="text-5xl font-black text-slate-900 tracking-tighter">{allEvents.length}<span className="text-[10px] font-black text-lime-600 ml-2 uppercase tracking-widest">Events</span></p>
               </div>
               <div className="rounded-[32px] bg-white p-8 shadow-sm border border-slate-100">
                 <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-300 mb-3">Community</p>
@@ -81,7 +93,6 @@ export default async function Home(props: { searchParams: Promise<{ category?: s
               </div>
             </div>
 
-            {/* カテゴリーフィルター（全カテゴリーを復活） */}
             <div className="rounded-[32px] bg-white p-8 shadow-sm border border-slate-100">
               <h2 className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-300 mb-6">Category Filter</h2>
               <div className="flex flex-wrap gap-2">
@@ -93,19 +104,17 @@ export default async function Home(props: { searchParams: Promise<{ category?: s
             </div>
           </div>
 
-          {/* 中央：カレンダー */}
           <div className="w-full">
-            <EventCalendar events={upcomingEvents} />
+            <EventCalendar events={filteredEvents} />
           </div>
 
-          {/* 右：イベントリスト */}
           <div className="rounded-[32px] bg-white p-8 shadow-sm border border-slate-100 flex flex-col max-h-[600px] lg:max-h-none overflow-hidden">
             <h2 className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-300 mb-6 flex justify-between items-center">
               <span>Event Timeline</span>
               {selectedCategory && <span className="text-lime-600 tracking-tighter">/ {selectedCategory.toUpperCase()}</span>}
             </h2>
             <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
-              {upcomingEvents.length > 0 ? upcomingEvents.map(event => (
+              {filteredEvents.length > 0 ? filteredEvents.map(event => (
                 <article key={event.id} className="relative rounded-2xl bg-slate-50 p-6 transition-all hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 group border border-transparent hover:border-slate-100">
                   <div className="flex justify-between items-start mb-4">
                     <span className="text-[8px] font-black uppercase tracking-[0.2em] text-lime-700 bg-lime-100 px-3 py-1.5 rounded-md">{event.category}</span>
