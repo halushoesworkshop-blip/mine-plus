@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link"; // ここにLinkを追加しました
 import {
   format,
   addMonths,
@@ -51,7 +52,6 @@ export default function EventCalendar({ events }: { events: any[] }) {
           >
             Prev
           </button>
-          {/* 月の表示を日本語に（例：2026年 5月） */}
           <span className="text-sm font-black tracking-widest text-slate-900">
             {format(currentMonth, "yyyy年 M月", { locale: ja })}
           </span>
@@ -63,7 +63,6 @@ export default function EventCalendar({ events }: { events: any[] }) {
           </button>
         </div>
         <div className="grid grid-cols-7 bg-slate-50/50">
-          {/* 曜日を日本語に */}
           {["日", "月", "火", "水", "木", "金", "土"].map((day, i) => (
             <div key={i} className={`py-3 text-center text-[10px] font-black text-slate-400 ${i === 0 ? "text-rose-400" : i === 6 ? "text-sky-400" : ""}`}>
               {day}
@@ -117,7 +116,6 @@ export default function EventCalendar({ events }: { events: any[] }) {
       {/* 選択した日のスケジュール表示 */}
       <div className="rounded-[32px] bg-white p-6 border border-slate-100 shadow-sm transition-all animate-in fade-in slide-in-from-top-2">
         <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-300 mb-4 flex justify-between items-center">
-          {/* 日付表示を日本語に */}
           <span>Schedule / {selectedDate ? format(selectedDate, "M月d日", { locale: ja }) : "Select Date"}</span>
           <span className="text-lime-600 italic">[{selectedDateEvents.length} Items]</span>
         </h3>
@@ -125,23 +123,27 @@ export default function EventCalendar({ events }: { events: any[] }) {
         <div className="space-y-3">
           {selectedDateEvents.length > 0 ? (
             selectedDateEvents.map((event) => {
-              // 時間のズレを防ぐ補正
               const isUTC = event.start_at.includes('Z') || event.start_at.includes('+');
               const safeDateString = isUTC ? event.start_at : event.start_at + '+09:00';
               const eventDate = new Date(safeDateString);
 
               return (
-                <div key={event.id} className="flex flex-col gap-1 border-l-4 border-slate-900 pl-4 py-1">
+                // ここを div から Link に変更し、ホバー時のスタイルも追加しました
+                <Link 
+                  href={`/events/${event.id}`} 
+                  key={event.id} 
+                  className="block flex flex-col gap-1 border-l-4 border-slate-900 pl-4 py-2 hover:bg-slate-50 transition-colors group cursor-pointer"
+                >
                   <span className="text-[8px] font-black uppercase tracking-widest text-lime-600">
                     {event.category}
                   </span>
-                  <p className="text-xs font-black text-slate-900 leading-tight">
+                  <p className="text-xs font-black text-slate-900 leading-tight group-hover:text-lime-600 transition-colors">
                     {event.title}
                   </p>
                   <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
                     Time : {format(eventDate, "HH:mm")} / Loc : {event.location}
                   </p>
-                </div>
+                </Link>
               );
             })
           ) : (
