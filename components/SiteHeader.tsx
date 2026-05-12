@@ -34,7 +34,7 @@ export default function SiteHeader({ user, selectedCategory }: { user: any; sele
               + Create New Event
             </Link>
             {user ? (
-              <form action="/auth/signout" method="post" onSubmit={() => setIsOpen(false)}>
+              <form action="/auth/signout" method="post">
                 <button className="text-sm font-black text-rose-500 uppercase tracking-widest hover:text-rose-600 transition-colors">Logout</button>
               </form>
             ) : (
