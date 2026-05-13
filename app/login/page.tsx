@@ -35,7 +35,7 @@ export default function LoginPage() {
     setErrorMessage(null);
     setLoading(true);
     try {
-      // ▼ ここが修正ポイントです！URLから「行きたかった場所」を取り出して繋ぎます
+      // ▼ ここが非常に重要です！URLの「?next=...」を引き継ぎます
       const searchParams = new URLSearchParams(window.location.search);
       const next = searchParams.get("next") || "/";
       const redirectTo = `${window.location.origin}/auth/callback?next=${next}`;
