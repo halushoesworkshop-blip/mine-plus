@@ -35,7 +35,11 @@ export default function LoginPage() {
     setErrorMessage(null);
     setLoading(true);
     try {
-      const redirectTo = `${window.location.origin}/auth/callback`;
+      // ▼ ここが修正ポイントです！URLから「行きたかった場所」を取り出して繋ぎます
+      const searchParams = new URLSearchParams(window.location.search);
+      const next = searchParams.get("next") || "/";
+      const redirectTo = `${window.location.origin}/auth/callback?next=${next}`;
+
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: { redirectTo },
