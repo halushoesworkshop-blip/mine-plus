@@ -3,9 +3,20 @@
 import { useState } from "react";
 import Link from "next/link";
 
-export default function SiteHeader({ user, selectedCategory }: { user: any; selectedCategory?: string }) {
+// ★修正：selectedArea（選択された地区）も受け取れるように追加
+export default function SiteHeader({ user, selectedCategory, selectedArea }: { user: any; selectedCategory?: string; selectedArea?: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const categories = ["festival", "food", "music", "sports", "art", "workshop", "market", "other"];
+  const areas = ["美祢地区", "秋芳地区", "美東地区"]; // ★追加：地区のリスト
+
+  // ★追加：地区とカテゴリの両方の絞り込みを維持したままURLを作る便利関数
+  const buildUrl = (category?: string, area?: string) => {
+    const params = new URLSearchParams();
+    if (category) params.set("category", category);
+    if (area) params.set("area", area);
+    const str = params.toString();
+    return str ? `/?${str}` : "/";
+  };
 
   return (
     <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-100">
@@ -31,7 +42,6 @@ export default function SiteHeader({ user, selectedCategory }: { user: any; sele
           <div className="flex flex-col gap-4">
             <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-300 border-b border-slate-50 pb-2">Menu</p>
             
-            {/* ▼ ここが修正ポイントです！ログイン状態に応じて行き先を変えます ▼ */}
             <Link 
               href={user ? "/events/new" : "/login?next=/events/new"} 
               onClick={() => setIsOpen(false)} 
@@ -49,15 +59,54 @@ export default function SiteHeader({ user, selectedCategory }: { user: any; sele
             )}
           </div>
 
+          {/* ★新規追加：地区の絞り込みエリア */}
           <div className="flex flex-col gap-4">
-            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-300 border-b border-slate-50 pb-2">Categories</p>
+            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-300 border-b border-slate-50 pb-2">Areas</p>
             <div className="flex flex-wrap gap-2">
-              <Link href="/" onClick={() => setIsOpen(false)} className={`rounded-full px-4 py-2 text-[8px] font-black tracking-widest transition-all ${!selectedCategory ? "bg-lime-600 text-white shadow-md shadow-lime-600/20" : "bg-slate-50 text-slate-400 hover:bg-slate-100"}`}>ALL</Link>
-              {categories.map(id => (
-                <Link key={id} href={`/?category=${id}`} onClick={() => setIsOpen(false)} className={`rounded-full px-4 py-2 text-[8px] font-black tracking-widest transition-all uppercase ${selectedCategory === id ? "bg-lime-600 text-white shadow-md shadow-lime-600/20" : "bg-slate-50 text-slate-400 hover:bg-slate-100"}`}>{id}</Link>
+              <Link 
+                href={buildUrl(selectedCategory, undefined)} 
+                onClick={() => setIsOpen(false)} 
+                className={`rounded-full px-4 py-2 text-[8px] font-black tracking-widest transition-all ${!selectedArea ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20" : "bg-slate-50 text-slate-400 hover:bg-slate-100"}`}
+              >
+                全地区
+              </Link>
+              {areas.map(area => (
+                <Link 
+                  key={area} 
+                  href={buildUrl(selectedCategory, area)} 
+                  onClick={() => setIsOpen(false)} 
+                  className={`rounded-full px-4 py-2 text-[8px] font-black tracking-widest transition-all ${selectedArea === area ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20" : "bg-slate-50 text-slate-400 hover:bg-slate-100"}`}
+                >
+                  {area}
+                </Link>
               ))}
             </div>
           </div>
+
+          {/* カテゴリーの絞り込みエリア */}
+          <div className="flex flex-col gap-4">
+            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-300 border-b border-slate-50 pb-2">Categories</p>
+            <div className="flex flex-wrap gap-2">
+              <Link 
+                href={buildUrl(undefined, selectedArea)} 
+                onClick={() => setIsOpen(false)} 
+                className={`rounded-full px-4 py-2 text-[8px] font-black tracking-widest transition-all ${!selectedCategory ? "bg-lime-600 text-white shadow-md shadow-lime-600/20" : "bg-slate-50 text-slate-400 hover:bg-slate-100"}`}
+              >
+                ALL
+              </Link>
+              {categories.map(id => (
+                <Link 
+                  key={id} 
+                  href={buildUrl(id, selectedArea)} 
+                  onClick={() => setIsOpen(false)} 
+                  className={`rounded-full px-4 py-2 text-[8px] font-black tracking-widest transition-all uppercase ${selectedCategory === id ? "bg-lime-600 text-white shadow-md shadow-lime-600/20" : "bg-slate-50 text-slate-400 hover:bg-slate-100"}`}
+                >
+                  {id}
+                </Link>
+              ))}
+            </div>
+          </div>
+          
         </div>
       )}
     </header>
