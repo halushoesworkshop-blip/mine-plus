@@ -49,6 +49,9 @@ export default async function EventDetail(props: { params: Promise<{ id: string 
 
   const isOwner = user && user.id === event.user_id;
 
+  // 過去のデータ用：priceが空の場合は、is_freeカラムなどから推測する安全策
+  const displayPrice = event.price ? event.price : (event.is_free ? "無料" : (event.fee_text || "未設定"));
+
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4 font-sans">
       <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
@@ -78,11 +81,22 @@ export default async function EventDetail(props: { params: Promise<{ id: string 
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-            {/* 2. カテゴリ */}
+            {/* 2. 地区 ＆ カテゴリ */}
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">カテゴリー</label>
-              <div className="mt-1">
-                <span className="inline-block px-3 py-1.5 bg-lime-100 text-lime-700 text-[10px] font-black rounded-md uppercase tracking-wider">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">地区 / カテゴリー</label>
+              <div className="mt-1 flex flex-wrap gap-2">
+                {/* 地区の表示（追加） */}
+                {event.area ? (
+                  <span className="inline-block px-3 py-1.5 bg-emerald-100 text-emerald-800 text-[10px] font-black rounded-md tracking-wider">
+                    {event.area}
+                  </span>
+                ) : (
+                  <span className="inline-block px-3 py-1.5 bg-gray-100 text-gray-500 text-[10px] font-black rounded-md tracking-wider">
+                    地区未設定
+                  </span>
+                )}
+                {/* カテゴリの表示 */}
+                <span className="inline-block px-3 py-1.5 bg-lime-100 text-lime-800 text-[10px] font-black rounded-md uppercase tracking-wider">
                   {event.category}
                 </span>
               </div>
@@ -95,14 +109,22 @@ export default async function EventDetail(props: { params: Promise<{ id: string 
             </div>
           </div>
 
-          {/* 4. 開催場所 */}
-          <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">開催場所</label>
-            <p className="text-gray-900 font-bold text-sm">{event.location}</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+            {/* 4. 開催場所 */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">開催場所</label>
+              <p className="text-gray-900 font-bold text-sm">{event.location}</p>
+            </div>
+
+            {/* ★ 参加費・料金（追加） */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">参加費・料金</label>
+              <p className="text-gray-900 font-bold text-sm">{displayPrice}</p>
+            </div>
           </div>
 
           {/* 5. 関連URL（もしあれば表示） */}
-          <div className="space-y-2">
+          <div className="space-y-2 border-t border-gray-50 pt-8">
             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">関連URL / 公式サイト</label>
             <div className="text-sm font-bold">
               {event.url ? (
@@ -116,7 +138,7 @@ export default async function EventDetail(props: { params: Promise<{ id: string 
           </div>
 
           {/* 6. 詳細説明 */}
-          <div className="space-y-2 border-t border-gray-50 pt-8">
+          <div className="space-y-2">
             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">イベントの詳細</label>
             <div className="mt-2 text-gray-700 leading-relaxed whitespace-pre-wrap font-medium text-sm bg-gray-50 p-6 rounded-xl">
               {linkify(event.description) || <span className="text-gray-300 italic font-normal">説明はありません</span>}

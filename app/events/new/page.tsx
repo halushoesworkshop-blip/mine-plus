@@ -18,6 +18,7 @@ type EventCategory =
 type FormState = {
   title: string;
   description: string;
+  area: string; // ★追加：地区
   location: string;
   address: string;
   startAtLocal: string;
@@ -27,7 +28,7 @@ type FormState = {
   feeText: string;
   capacity: string;
   contactInfo: string;
-  externalUrl: string;
+  externalUrl: string; // URL用
 };
 
 const categoryLabels: Record<EventCategory, string> = {
@@ -57,6 +58,7 @@ export default function NewEventPage() {
   const [form, setForm] = useState<FormState>({
     title: "",
     description: "",
+    area: "", // 初期値は空
     location: "",
     address: "",
     startAtLocal: "",
@@ -79,17 +81,16 @@ export default function NewEventPage() {
     });
   }, [supabase]);
 
-  // 送信ボタンが押せるかどうかの判定
+  // ★修正：送信ボタンが押せる条件に「地区（area）」の入力も含める
   const canSubmit =
     !!userId &&
     form.title.trim().length > 0 &&
+    form.area.trim().length > 0 &&
     form.location.trim().length > 0 &&
     form.startAtLocal.trim().length > 0;
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    console.log("Submit start..."); // デバッグ用
-    
     if (loading) return;
     setError(null);
 
@@ -109,6 +110,7 @@ export default function NewEventPage() {
         user_id: userId,
         title: form.title.trim(),
         description: form.description.trim() || null,
+        area: form.area, // ★追加：地区を保存
         location: form.location.trim(),
         address: form.address.trim() || null,
         start_at,
@@ -116,13 +118,13 @@ export default function NewEventPage() {
         category: form.category,
         is_free: form.isFree,
         fee_text: form.isFree ? null : form.feeText.trim() || null,
+        price: form.isFree ? "無料" : form.feeText.trim(), // ★追加：価格（無料/金額）を保存
         capacity,
         contact_info: form.contactInfo.trim() || null,
         external_url: form.externalUrl.trim() || null,
+        url: form.externalUrl.trim() || null, // ★追加：URLを保存
         status: "published",
       };
-
-      console.log("Sending payload:", payload); // デバッグ用
 
       const { data, error: insertError } = await supabase
         .from("events")
@@ -130,16 +132,13 @@ export default function NewEventPage() {
         .select();
 
       if (insertError) {
-        console.error("Supabase insert error:", insertError);
         setError(`保存エラー: ${insertError.message}`);
         return;
       }
 
-      console.log("Insert success:", data);
       router.push("/");
       router.refresh();
     } catch (err: any) {
-      console.error("Unexpected error:", err);
       setError(`予期せぬエラーが発生しました: ${err.message}`);
     } finally {
       setLoading(false);
@@ -162,58 +161,84 @@ export default function NewEventPage() {
         {!userId ? (
           <div className="rounded-2xl bg-white p-10 shadow-sm ring-1 ring-slate-200 text-center">
             <p className="text-slate-700 mb-4">投稿するにはログインが必要です。</p>
-            <Link href="/login" className="rounded-full bg-emerald-600 px-8 py-3 font-bold text-white">ログイン画面へ</Link>
+            <Link href="/login?next=/events/new" className="rounded-full bg-emerald-600 px-8 py-3 font-bold text-white">ログイン画面へ</Link>
           </div>
         ) : (
           <form onSubmit={onSubmit} className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-            <div className="grid gap-5">
+            <div className="grid gap-6">
+              
               {/* タイトル */}
               <div>
                 <label className="text-sm font-semibold text-slate-800">タイトル *</label>
-                <input value={form.title} onChange={(e) => setForm(p => ({ ...p, title: e.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm" placeholder="例）駅前マルシェ" required />
+                <input value={form.title} onChange={(e) => setForm(p => ({ ...p, title: e.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="例）駅前マルシェ" required />
               </div>
 
-              {/* カテゴリ */}
-              <div>
-                <label className="text-sm font-semibold text-slate-800">カテゴリ *</label>
-                <select value={form.category} onChange={(e) => setForm(p => ({ ...p, category: e.target.value as EventCategory }))} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm">
-                  {(Object.keys(categoryLabels) as EventCategory[]).map(key => (
-                    <option key={key} value={key}>{categoryLabels[key]}</option>
-                  ))}
-                </select>
+              {/* 地区とカテゴリを横並びに */}
+              <div className="grid gap-4 md:grid-cols-2">
+                {/* ★新規追加：地区 */}
+                <div>
+                  <label className="text-sm font-semibold text-slate-800">地区 *</label>
+                  <select value={form.area} onChange={(e) => setForm(p => ({ ...p, area: e.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-emerald-500 focus:ring-emerald-500" required>
+                    <option value="" disabled>地区を選択してください</option>
+                    <option value="美祢地区">美祢地区</option>
+                    <option value="秋芳地区">秋芳地区</option>
+                    <option value="美東地区">美東地区</option>
+                  </select>
+                </div>
+                
+                {/* カテゴリ */}
+                <div>
+                  <label className="text-sm font-semibold text-slate-800">カテゴリ *</label>
+                  <select value={form.category} onChange={(e) => setForm(p => ({ ...p, category: e.target.value as EventCategory }))} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                    {(Object.keys(categoryLabels) as EventCategory[]).map(key => (
+                      <option key={key} value={key}>{categoryLabels[key]}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               {/* 日時 */}
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <label className="text-sm font-semibold text-slate-800">開始日時 *</label>
-                  <input type="datetime-local" value={form.startAtLocal} onChange={(e) => setForm(p => ({ ...p, startAtLocal: e.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm" required />
+                  <input type="datetime-local" value={form.startAtLocal} onChange={(e) => setForm(p => ({ ...p, startAtLocal: e.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-emerald-500 focus:ring-emerald-500" required />
                 </div>
                 <div>
                   <label className="text-sm font-semibold text-slate-800">終了日時（任意）</label>
-                  <input type="datetime-local" value={form.endAtLocal} onChange={(e) => setForm(p => ({ ...p, endAtLocal: e.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm" />
+                  <input type="datetime-local" value={form.endAtLocal} onChange={(e) => setForm(p => ({ ...p, endAtLocal: e.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
                 </div>
               </div>
 
               {/* 場所 */}
               <div>
-                <label className="text-sm font-semibold text-slate-800">場所 *</label>
-                <input value={form.location} onChange={(e) => setForm(p => ({ ...p, location: e.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm" placeholder="例）中央広場" required />
+                <label className="text-sm font-semibold text-slate-800">開催場所の名前 *</label>
+                <input value={form.location} onChange={(e) => setForm(p => ({ ...p, location: e.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="例）美祢市中央広場" required />
               </div>
 
-              {/* その他項目（住所・説明など）は簡略化せず維持 */}
+              {/* ★新規追加：URL */}
               <div>
-                <label className="text-sm font-semibold text-slate-800">説明</label>
-                <textarea value={form.description} onChange={(e) => setForm(p => ({ ...p, description: e.target.value }))} className="mt-2 w-full min-h-[100px] rounded-xl border border-slate-200 px-4 py-3 text-sm" placeholder="イベントの詳細" />
+                <label className="text-sm font-semibold text-slate-800">関連URL（任意）</label>
+                <input type="url" value={form.externalUrl} onChange={(e) => setForm(p => ({ ...p, externalUrl: e.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="例）https://..." />
               </div>
 
-              {/* 参加費設定 */}
-              <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl">
-                 <input type="checkbox" id="isFree" checked={form.isFree} onChange={(e) => setForm(p => ({ ...p, isFree: e.target.checked }))} className="w-5 h-5" />
-                 <label htmlFor="isFree" className="text-sm font-bold">参加費無料</label>
-                 {!form.isFree && (
-                   <input value={form.feeText} onChange={(e) => setForm(p => ({ ...p, feeText: e.target.value }))} className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="料金（例：500円）" />
-                 )}
+              {/* 説明 */}
+              <div>
+                <label className="text-sm font-semibold text-slate-800">イベントの詳細</label>
+                <textarea value={form.description} onChange={(e) => setForm(p => ({ ...p, description: e.target.value }))} className="mt-2 w-full min-h-[120px] rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="イベントの見どころや注意事項など" />
+              </div>
+
+              {/* ★UI改善：参加費設定（見やすくしました） */}
+              <div className="flex flex-col gap-2 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                 <label className="text-sm font-semibold text-slate-800">参加費・料金</label>
+                 <div className="flex items-center gap-4 mt-1">
+                   <label className="flex items-center gap-2 cursor-pointer">
+                     <input type="checkbox" checked={form.isFree} onChange={(e) => setForm(p => ({ ...p, isFree: e.target.checked, feeText: e.target.checked ? "" : p.feeText }))} className="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500" />
+                     <span className="text-sm font-bold text-slate-700">無料</span>
+                   </label>
+                   {!form.isFree && (
+                     <input value={form.feeText} onChange={(e) => setForm(p => ({ ...p, feeText: e.target.value }))} className="flex-1 rounded-lg border border-slate-200 px-4 py-2 text-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="例：大人 500円、高校生以下 無料" required />
+                   )}
+                 </div>
               </div>
 
               {error && (
