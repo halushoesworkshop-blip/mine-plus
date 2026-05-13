@@ -23,10 +23,11 @@ export default function EditEventPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 【完全一致】新規投稿(New)画面と全く同じ項目を持つステート
+  // ★修正：area（地区）をフォームの初期状態に追加
   const [form, setForm] = useState({
     title: "",
     description: "",
+    area: "", // ★追加
     location: "",
     address: "",
     category: "festival" as EventCategory,
@@ -68,10 +69,11 @@ export default function EditEventPage() {
         return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
       };
 
-      // 【データ読み込み】DBの値をフォームにセット
+      // ★修正：DBから読み込んだ「地区（area）」をセットする
       setForm({
         title: event.title || "",
         description: event.description || "",
+        area: event.area || "", // ★追加
         location: event.location || "",
         address: event.address || "",
         category: (event.category as EventCategory) || "festival",
@@ -81,7 +83,7 @@ export default function EditEventPage() {
         feeText: event.fee_text || "",
         capacity: event.capacity?.toString() || "",
         contactInfo: event.contact_info || "",
-        externalUrl: event.external_url || "",
+        externalUrl: event.external_url || event.url || "", // 念のためurlカラムも考慮
       });
       setLoading(false);
     }
@@ -95,11 +97,13 @@ export default function EditEventPage() {
     setError(null);
     
     try {
+      // ★修正：更新時に、area、price、url の3つも保存するように追加
       const { error: updateError } = await supabase
         .from("events")
         .update({
           title: form.title.trim(),
           description: form.description.trim() || null,
+          area: form.area, // ★追加
           location: form.location.trim(),
           address: form.address.trim() || null,
           start_at: new Date(form.startAtLocal).toISOString(),
@@ -107,9 +111,11 @@ export default function EditEventPage() {
           category: form.category,
           is_free: form.isFree,
           fee_text: form.isFree ? null : form.feeText.trim() || null,
+          price: form.isFree ? "無料" : form.feeText.trim(), // ★追加：料金
           capacity: form.capacity.trim() ? Number(form.capacity) : null,
           contact_info: form.contactInfo.trim() || null,
           external_url: form.externalUrl.trim() || null,
+          url: form.externalUrl.trim() || null, // ★追加：URL
         })
         .eq("id", eventId);
 
@@ -145,14 +151,25 @@ export default function EditEventPage() {
             <input value={form.title} onChange={e => setForm({...form, title: e.target.value})} className="w-full border-slate-200 border-2 rounded-2xl p-4 font-bold outline-none focus:border-yellow-400 transition" required />
           </div>
 
-          {/* カテゴリ */}
-          <div>
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Category *</label>
-            <select value={form.category} onChange={e => setForm({...form, category: e.target.value as EventCategory})} className="w-full border-slate-200 border-2 rounded-2xl p-4 font-bold outline-none focus:border-yellow-400 appearance-none bg-white">
-              {Object.keys(categoryLabels).map(key => (
-                <option key={key} value={key}>{(categoryLabels as any)[key]}</option>
-              ))}
-            </select>
+          {/* ★修正：地区 と カテゴリ を横並びに */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Area *</label>
+              <select value={form.area} onChange={e => setForm({...form, area: e.target.value})} className="w-full border-slate-200 border-2 rounded-2xl p-4 font-bold outline-none focus:border-yellow-400 appearance-none bg-white" required>
+                <option value="" disabled>地区を選択</option>
+                <option value="美祢地区">美祢地区</option>
+                <option value="秋芳地区">秋芳地区</option>
+                <option value="美東地区">美東地区</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Category *</label>
+              <select value={form.category} onChange={e => setForm({...form, category: e.target.value as EventCategory})} className="w-full border-slate-200 border-2 rounded-2xl p-4 font-bold outline-none focus:border-yellow-400 appearance-none bg-white">
+                {Object.keys(categoryLabels).map(key => (
+                  <option key={key} value={key}>{(categoryLabels as any)[key]}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* 日時 */}
