@@ -1,144 +1,97 @@
-"use client";
-
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { createSupabaseServerClient } from "@/src/utils/supabase/server";
+import EventCalendar from "@/components/EventCalendar";
+import SiteHeader from "@/components/SiteHeader";
 
-import { createSupabaseBrowserClient } from "@/src/utils/supabase/client";
+export const revalidate = 0;
+export const dynamic = "force-dynamic";
 
-function messageForErrorParam(raw: string): string {
-  switch (raw) {
-    case "auth":
-      return "ログインに失敗しました。";
-    case "missing_code":
-      return "認証情報が不足しています。もう一度お試しください。";
-    case "server_config":
-      return "サーバー設定が不完全です。環境変数を確認してください。";
-    default:
-      return decodeURIComponent(raw);
-  }
+function formatEventDate(dateString: string) {
+  const isUTC = dateString.includes('Z') || dateString.includes('+');
+  const safeDateString = isUTC ? dateString : dateString + '+09:00';
+  const date = new Date(safeDateString);
+  return new Intl.DateTimeFormat("ja-JP", {
+    timeZone: "Asia/Tokyo", month: "short", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit",
+  }).format(date);
 }
 
-export default function LoginPage() {
-  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
-  const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+// searchParamsの型を正確に定義します
+type SearchParams = {
+  category?: string;
+  area?: string;
+};
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const error = params.get("error");
-    if (error) {
-      setErrorMessage(messageForErrorParam(error));
-    }
-  }, []);
+export default async function Home({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  async function signInWithGoogle() {
-    setErrorMessage(null);
-    setLoading(true);
-    try {
-      // ▼ ここが非常に重要です！URLの「?next=...」を引き継ぎます
-      const searchParams = new URLSearchParams(window.location.search);
-      const next = searchParams.get("next") || "/";
-      const redirectTo = `${window.location.origin}/auth/callback?next=${next}`;
+  // ★修正ポイント：awaitを使って確実にsearchParamsの箱を開ける！
+  const resolvedParams = await searchParams;
+  const selectedCategory = resolvedParams.category;
+  const selectedArea = resolvedParams.area;
 
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo },
-      });
-
-      if (error) {
-        setErrorMessage(error.message);
-        setLoading(false);
-        return;
-      }
-
-      if (data.url) {
-        window.location.assign(data.url);
-        return;
-      }
-
-      setErrorMessage("ログイン画面のURLを取得できませんでした。");
-    } catch {
-      setErrorMessage("ログイン開始に失敗しました。時間をおいて再度お試しください。");
-    } finally {
-      setLoading(false);
-    }
-  }
+  const { data: allEventsData } = await supabase.from("events").select("*").order("start_at", { ascending: true });
+  const allEvents = allEventsData || [];
+  
+  // カテゴリーと地区、両方の条件で絞り込む
+  const filteredEvents = allEvents.filter(event => {
+    const matchCategory = selectedCategory ? event.category === selectedCategory : true;
+    const matchArea = selectedArea ? event.area === selectedArea : true;
+    return matchCategory && matchArea;
+  });
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <main className="mx-auto flex w-full max-w-md flex-col gap-8 px-6 py-12 md:py-16">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium tracking-wide text-emerald-700">
-              LOGIN
-            </p>
-            <h1 className="mt-2 text-2xl font-bold">ログイン</h1>
-            <p className="mt-2 text-sm text-slate-600">
-              Google アカウントでサインインしてイベントを投稿できます。
-            </p>
+    <div className="min-h-screen bg-[#F8F9FA] text-slate-900 font-sans selection:bg-lime-300">
+      {/* SiteHeaderに選択中の情報を渡す */}
+      <SiteHeader user={user} selectedCategory={selectedCategory} selectedArea={selectedArea} />
+
+      <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-8 md:px-8 md:py-12">
+        <div className="grid gap-8 lg:grid-cols-[1fr_1fr]">
+          
+          <div className="w-full">
+            <EventCalendar events={filteredEvents} />
           </div>
-          <Link
-            href="/"
-            className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50"
-          >
-            トップへ
-          </Link>
-        </div>
 
-        <div className="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
-          {errorMessage ? (
-            <div
-              className="mb-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900"
-              role="alert"
-            >
-              {errorMessage}
+          <div className="rounded-[32px] bg-white p-6 md:p-8 shadow-sm border border-slate-100 flex flex-col max-h-[700px] overflow-hidden">
+            <h2 className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-300 mb-6 flex justify-between items-center">
+              <span>Event Timeline</span>
+              {/* 絞り込み状態を見出しに表示 */}
+              <div className="text-right flex items-center gap-2">
+                {selectedArea && <span className="text-emerald-600 tracking-tighter">/ {selectedArea}</span>}
+                {selectedCategory && <span className="text-lime-600 tracking-tighter">/ {selectedCategory.toUpperCase()}</span>}
+              </div>
+            </h2>
+            <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
+              {filteredEvents.length > 0 ? filteredEvents.map(event => (
+                <Link href={`/events/${event.id}`} key={event.id} className="block relative rounded-2xl bg-slate-50 p-5 transition-all hover:bg-white hover:shadow-lg hover:shadow-slate-200/50 group border border-transparent hover:border-slate-100 hover:scale-[1.02]">
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex gap-2 flex-wrap">
+                      {event.area && (
+                        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-emerald-800 bg-emerald-100 px-3 py-1.5 rounded-md">
+                          {event.area}
+                        </span>
+                      )}
+                      <span className="text-[8px] font-black uppercase tracking-[0.2em] text-lime-700 bg-lime-100 px-3 py-1.5 rounded-md">
+                        {event.category}
+                      </span>
+                    </div>
+                  </div>
+                  <h3 className="text-sm font-black leading-tight text-slate-900 mb-3 tracking-tight group-hover:text-lime-600 transition-colors">{event.title}</h3>
+                  <div className="flex flex-col gap-1 text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                    <span className="flex items-center gap-2 italic">Date : {formatEventDate(event.start_at)}</span>
+                    <span className="flex items-center gap-2 italic max-w-full truncate">Loc : {event.location}</span>
+                  </div>
+                </Link>
+              )) : (
+                <div className="text-center py-20 border-2 border-dashed border-slate-100 rounded-2xl">
+                  <p className="text-[9px] font-black text-slate-200 uppercase tracking-[0.4em]">Empty</p>
+                </div>
+              )}
             </div>
-          ) : null}
+          </div>
 
-          <button
-            type="button"
-            onClick={signInWithGoogle}
-            disabled={loading}
-            className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <GoogleGlyph className="h-5 w-5 shrink-0" aria-hidden />
-            {loading ? "リダイレクト中..." : "Google で続ける"}
-          </button>
-
-          <p className="mt-6 text-center text-xs leading-relaxed text-slate-500">
-            Supabase の Google 認証を利用します。
-            <br />
-            ダッシュボードでリダイレクト URL に{" "}
-            <code className="rounded bg-slate-100 px-1.5 py-0.5 text-[0.65rem] text-slate-700">
-              …/auth/callback
-            </code>{" "}
-            を登録してください。
-          </p>
         </div>
       </main>
     </div>
-  );
-}
-
-function GoogleGlyph({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        fill="#4285F4"
-        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-      />
-      <path
-        fill="#34A853"
-        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-      />
-      <path
-        fill="#FBBC05"
-        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-      />
-      <path
-        fill="#EA4335"
-        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-      />
-    </svg>
   );
 }
