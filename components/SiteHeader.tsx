@@ -30,11 +30,17 @@ export default function SiteHeader({ user, selectedCategory }: { user: any; sele
         <div className="absolute left-0 top-full w-full bg-white border-b border-slate-100 shadow-2xl p-6 md:p-8 flex flex-col gap-8 animate-in slide-in-from-top-2">
           <div className="flex flex-col gap-4">
             <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-300 border-b border-slate-50 pb-2">Menu</p>
-            <Link href="/events/new" onClick={() => setIsOpen(false)} className="text-sm font-black text-slate-900 uppercase tracking-widest hover:text-lime-600 transition-colors">
+            
+            {/* ▼ ここが修正ポイントです！ログイン状態に応じて行き先を変えます ▼ */}
+            <Link 
+              href={user ? "/events/new" : "/login?next=/events/new"} 
+              onClick={() => setIsOpen(false)} 
+              className="text-sm font-black text-slate-900 uppercase tracking-widest hover:text-lime-600 transition-colors"
+            >
               + Create New Event
             </Link>
+
             {user ? (
-              // ▼ ここが修正ポイント： onSubmit={() => setIsOpen(false)} を削除しました
               <form action="/auth/signout" method="post">
                 <button className="text-sm font-black text-rose-500 uppercase tracking-widest hover:text-rose-600 transition-colors">Logout</button>
               </form>

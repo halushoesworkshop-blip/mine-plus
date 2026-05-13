@@ -1,15 +1,17 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/src/utils/supabase/server'
+import { cookies } from 'next/headers'
 
-// ▼ 絶対に追加：このファイルは毎回必ず最新の処理を行うよう強制する（キャッシュ無効化）
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
   
-  // バトン（行き先）を受け取る。無ければホームへ。
-  const next = requestUrl.searchParams.get('next') || '/'
+  // ★追加：Cookieから記憶を引き出す！
+  const cookieStore = await cookies()
+  const nextUrlCookie = cookieStore.get('next_url')?.value
+  const next = nextUrlCookie || requestUrl.searchParams.get('next') || '/'
 
   if (code) {
     const supabase = await createSupabaseServerClient()
