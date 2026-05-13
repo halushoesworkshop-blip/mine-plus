@@ -7,20 +7,16 @@ export const dynamic = 'force-dynamic'
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
-  
-  // ★追加：Cookieから記憶を引き出す！
   const cookieStore = await cookies()
-  const nextUrlCookie = cookieStore.get('next_url')?.value
-  const next = nextUrlCookie || requestUrl.searchParams.get('next') || '/'
+  const next = cookieStore.get('next_url')?.value || '/'
 
   if (code) {
     const supabase = await createSupabaseServerClient()
-    await supabase.auth.exchangeCodeForSession(code)
+    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    if (error) return NextResponse.redirect(`${requestUrl.origin}/login?error=${error.message}`)
   }
 
-  // 行き先へリダイレクト
-  const redirectUrl = new URL(next, requestUrl.origin)
-  redirectUrl.searchParams.set('login', 'success')
-
-  return NextResponse.redirect(redirectUrl, { status: 303 })
+  const response = NextResponse.redirect(new URL(next, requestUrl.origin))
+  response.cookies.delete('next_url')
+  return response
 }

@@ -13,13 +13,12 @@ export async function createSupabaseServerClient() {
           return cookieStore.getAll();
         },
         setAll(cookiesToSet) {
-          // ▼ ここに try { ... } catch { ... } を追加してエラーをスルーさせます
           try {
-            for (const { name, value, options } of cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) => {
               cookieStore.set(name, value, options);
-            }
+            });
           } catch (error) {
-            // Server Component からCookieを書き換えようとした際のエラーを無視する
+            // Server Componentでの書き込みエラーを無視して処理を継続させる
           }
         },
       },
