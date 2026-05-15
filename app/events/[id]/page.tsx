@@ -47,16 +47,7 @@ export default async function EventDetailPage({
       </nav>
 
       <main className="mx-auto max-w-2xl px-6">
-        {/* ★チラシ画像表示エリア */}
-        {event.image_url && (
-          <div className="relative mb-8 mt-4 overflow-hidden rounded-[32px] bg-slate-100 shadow-2xl shadow-slate-200">
-            <img
-              src={event.image_url}
-              alt={event.title}
-              className="h-auto w-full object-cover"
-            />
-          </div>
-        )}
+        {/* ★ここにあった画像表示エリアを削除しました */}
 
         <div className="mt-8">
           <div className="flex items-center gap-2 mb-4">
@@ -69,6 +60,7 @@ export default async function EventDetailPage({
             {event.title}
           </h1>
 
+          {/* 基本情報エリア */}
           <div className="mt-8 space-y-6">
             {/* 開催日時 */}
             <div className="flex gap-4">
@@ -122,6 +114,21 @@ export default async function EventDetailPage({
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Description</p>
               <div className="whitespace-pre-wrap text-sm font-medium leading-relaxed text-slate-600">
                 {event.description}
+              </div>
+            </div>
+          )}
+
+          {/* ★修正ポイント：画像を一番下（外部リンクボタンの上）へ移動、サイズを控えめに調整 */}
+          {event.image_url && (
+            <div className="mt-12">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Flyer / Image</p>
+              {/* max-w-sm (最大幅を小さく) と mx-auto (中央寄せ) を追加 */}
+              <div className="max-w-sm mx-auto relative overflow-hidden rounded-2xl bg-slate-50 border border-slate-100 shadow-lg shadow-slate-100/50">
+                <img
+                  src={event.image_url}
+                  alt={event.title}
+                  className="h-auto w-full object-cover"
+                />
               </div>
             </div>
           )}
