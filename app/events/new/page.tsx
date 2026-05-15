@@ -18,7 +18,7 @@ type EventCategory =
 type FormState = {
   title: string;
   description: string;
-  area: string; // ★追加：地区
+  area: string;
   location: string;
   address: string;
   startAtLocal: string;
@@ -28,7 +28,7 @@ type FormState = {
   feeText: string;
   capacity: string;
   contactInfo: string;
-  externalUrl: string; // URL用
+  externalUrl: string;
 };
 
 const categoryLabels: Record<EventCategory, string> = {
@@ -55,10 +55,14 @@ export default function NewEventPage() {
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  
+  // ★追加：選択された画像ファイルを保持するステート
+  const [imageFile, setImageFile] = useState<File | null>(null);
+
   const [form, setForm] = useState<FormState>({
     title: "",
     description: "",
-    area: "", // 初期値は空
+    area: "",
     location: "",
     address: "",
     startAtLocal: "",
@@ -81,7 +85,6 @@ export default function NewEventPage() {
     });
   }, [supabase]);
 
-  // ★修正：送信ボタンが押せる条件に「地区（area）」の入力も含める
   const canSubmit =
     !!userId &&
     form.title.trim().length > 0 &&
@@ -99,18 +102,42 @@ export default function NewEventPage() {
       return;
     }
 
-    const start_at = toTimestamptzFromLocalInput(form.startAtLocal);
-    const end_at = form.endAtLocal ? toTimestamptzFromLocalInput(form.endAtLocal) : null;
-    const capacity = form.capacity.trim().length > 0 ? Number(form.capacity) : null;
-
     setLoading(true);
 
     try {
+      let imageUrl = null;
+
+      // ★追加：画像が選択されている場合、Storage（event-images）へアップロード
+      if (imageFile) {
+        const fileExt = imageFile.name.split('.').pop();
+        // ファイル名が被らないようにランダムな文字列を生成
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('event-images')
+          .upload(fileName, imageFile, { cacheControl: '3600', upsert: false });
+
+        if (uploadError) {
+          throw new Error(`画像のアップロードに失敗しました: ${uploadError.message}`);
+        }
+
+        // アップロード成功後、画像の公開URLを取得
+        const { data: publicUrlData } = supabase.storage
+          .from('event-images')
+          .getPublicUrl(fileName);
+
+        imageUrl = publicUrlData.publicUrl;
+      }
+
+      const start_at = toTimestamptzFromLocalInput(form.startAtLocal);
+      const end_at = form.endAtLocal ? toTimestamptzFromLocalInput(form.endAtLocal) : null;
+      const capacity = form.capacity.trim().length > 0 ? Number(form.capacity) : null;
+
       const payload = {
         user_id: userId,
         title: form.title.trim(),
         description: form.description.trim() || null,
-        area: form.area, // ★追加：地区を保存
+        area: form.area,
         location: form.location.trim(),
         address: form.address.trim() || null,
         start_at,
@@ -118,29 +145,27 @@ export default function NewEventPage() {
         category: form.category,
         is_free: form.isFree,
         fee_text: form.isFree ? null : form.feeText.trim() || null,
-        price: form.isFree ? "無料" : form.feeText.trim(), // ★追加：価格（無料/金額）を保存
+        price: form.isFree ? "無料" : form.feeText.trim(),
         capacity,
         contact_info: form.contactInfo.trim() || null,
         external_url: form.externalUrl.trim() || null,
-        url: form.externalUrl.trim() || null, // ★追加：URLを保存
+        url: form.externalUrl.trim() || null,
+        image_url: imageUrl, // ★追加：取得した画像URLを保存
         status: "published",
       };
 
-      const { data, error: insertError } = await supabase
+      const { error: insertError } = await supabase
         .from("events")
-        .insert(payload)
-        .select();
+        .insert(payload);
 
       if (insertError) {
-        setError(`保存エラー: ${insertError.message}`);
-        return;
+        throw new Error(`保存エラー: ${insertError.message}`);
       }
 
       router.push("/");
       router.refresh();
     } catch (err: any) {
-      setError(`予期せぬエラーが発生しました: ${err.message}`);
-    } finally {
+      setError(err.message || "予期せぬエラーが発生しました");
       setLoading(false);
     }
   }
@@ -173,9 +198,20 @@ export default function NewEventPage() {
                 <input value={form.title} onChange={(e) => setForm(p => ({ ...p, title: e.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="例）駅前マルシェ" required />
               </div>
 
-              {/* 地区とカテゴリを横並びに */}
+              {/* ★追加：チラシ画像アップロード */}
+              <div>
+                <label className="text-sm font-semibold text-slate-800">チラシ・画像</label>
+                <input 
+                  type="file" 
+                  accept="image/jpeg, image/png, image/webp"
+                  onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+                  className="mt-2 w-full text-sm text-slate-500 file:mr-4 file:py-3 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer border border-slate-200 rounded-xl p-2" 
+                />
+                <p className="mt-2 text-[10px] text-slate-400">※ 5MB以下の JPEG, PNG, WEBP 画像がアップロード可能です。</p>
+              </div>
+
+              {/* 地区とカテゴリ */}
               <div className="grid gap-4 md:grid-cols-2">
-                {/* ★新規追加：地区 */}
                 <div>
                   <label className="text-sm font-semibold text-slate-800">地区 *</label>
                   <select value={form.area} onChange={(e) => setForm(p => ({ ...p, area: e.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-emerald-500 focus:ring-emerald-500" required>
@@ -185,8 +221,6 @@ export default function NewEventPage() {
                     <option value="美東地区">美東地区</option>
                   </select>
                 </div>
-                
-                {/* カテゴリ */}
                 <div>
                   <label className="text-sm font-semibold text-slate-800">カテゴリ *</label>
                   <select value={form.category} onChange={(e) => setForm(p => ({ ...p, category: e.target.value as EventCategory }))} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-emerald-500 focus:ring-emerald-500">
@@ -215,7 +249,7 @@ export default function NewEventPage() {
                 <input value={form.location} onChange={(e) => setForm(p => ({ ...p, location: e.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="例）美祢市中央広場" required />
               </div>
 
-              {/* ★新規追加：URL */}
+              {/* URL */}
               <div>
                 <label className="text-sm font-semibold text-slate-800">関連URL（任意）</label>
                 <input type="url" value={form.externalUrl} onChange={(e) => setForm(p => ({ ...p, externalUrl: e.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="例）https://..." />
@@ -227,7 +261,7 @@ export default function NewEventPage() {
                 <textarea value={form.description} onChange={(e) => setForm(p => ({ ...p, description: e.target.value }))} className="mt-2 w-full min-h-[120px] rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="イベントの見どころや注意事項など" />
               </div>
 
-              {/* ★UI改善：参加費設定（見やすくしました） */}
+              {/* 参加費設定 */}
               <div className="flex flex-col gap-2 p-4 bg-slate-50 rounded-xl border border-slate-100">
                  <label className="text-sm font-semibold text-slate-800">参加費・料金</label>
                  <div className="flex items-center gap-4 mt-1">
