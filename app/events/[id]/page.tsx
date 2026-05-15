@@ -11,10 +11,10 @@ export default async function EventDetailPage({
   const { id } = await params;
   const supabase = await createSupabaseServerClient();
 
-  // 1. ログインユーザーを取得
+  // ログインユーザーを取得
   const { data: { user } } = await supabase.auth.getUser();
 
-  // 2. イベント情報を取得
+  // イベント情報を取得
   const { data: event, error } = await supabase
     .from("events")
     .select("*")
@@ -25,7 +25,7 @@ export default async function EventDetailPage({
     notFound();
   }
 
-  // ★ 判定：ユーザーIDと投稿者IDを比較
+  // 本人判定
   const isOwner = user && user.id === event.user_id;
 
   const startDate = new Date(event.start_at);
@@ -37,63 +37,134 @@ export default async function EventDetailPage({
     });
   };
 
+  const flyerImage = event.image_url;
+  const officialLink = event.external_url || event.url; // どちらの列名でも対応
+
   return (
     <div className="min-h-screen bg-white pb-20 text-slate-900">
+      {/* ナビゲーション */}
       <nav className="sticky top-0 z-10 flex items-center justify-between bg-white/80 px-6 py-4 backdrop-blur-md">
-        <Link href="/" className="text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-900">
-          ← Back
+        <Link href="/" className="text-xs font-black tracking-widest text-slate-400 hover:text-slate-900">
+          ← 戻る
         </Link>
 
-        <div className="flex items-center gap-4">
-          {/* ★ デバッグ用：本人判定が成功しているか、ボタンが出るはずの場所に文字を出してみる */}
-          {isOwner ? (
-            <div className="flex items-center gap-4">
-              <Link href={`/events/${id}/edit`} className="text-[10px] font-black uppercase text-emerald-600">
-                Edit
-              </Link>
-              <DeleteButton eventId={id} />
-            </div>
-          ) : (
-            <span className="text-[8px] text-slate-300 uppercase font-bold">
-              {user ? "Not your event" : "Not logged in"}
-            </span>
-          )}
-        </div>
+        {/* 編集・削除ボタン（本人のみ表示） */}
+        {isOwner && (
+          <div className="flex items-center gap-4">
+            <Link 
+              href={`/events/${id}/edit`} 
+              className="text-[10px] font-black tracking-widest text-slate-400 hover:text-emerald-600 transition-colors"
+            >
+              編集
+            </Link>
+            <DeleteButton eventId={id} />
+          </div>
+        )}
       </nav>
 
-      {/* ★ デバッグ情報を画面最上部に出す（確認したら消します） */}
-      <div className="bg-slate-100 p-2 text-[8px] font-mono text-slate-500 overflow-x-auto">
-        <p>Your ID: {user?.id || "None"}</p>
-        <p>Owner ID: {event.user_id || "None"}</p>
-      </div>
-
       <main className="mx-auto max-w-2xl px-6">
-        {/* 以下、タイトルや画像などの表示部分はそのまま ... */}
         <div className="mt-8">
+          {/* カテゴリと地区 */}
           <div className="flex items-center gap-2 mb-4">
-            <span className="rounded-md bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-600 border border-emerald-100">{event.area}</span>
-            <span className="rounded-md bg-slate-100 px-2 py-1 text-[10px] font-black uppercase text-slate-500">{event.category}</span>
+            <span className="rounded-md bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-600 border border-emerald-100">
+              {event.area}
+            </span>
+            <span className="rounded-md bg-slate-100 px-2 py-1 text-[10px] font-black uppercase tracking-tighter text-slate-500">
+              {event.category}
+            </span>
           </div>
-          <h1 className="text-3xl font-black tracking-tighter text-slate-900">{event.title}</h1>
           
-          <div className="mt-8 space-y-6 text-sm font-bold">
-            <p>開始: {formatDate(startDate)}</p>
-            <p>場所: {event.location}</p>
+          {/* タイトル */}
+          <h1 className="text-3xl font-black leading-tight tracking-tighter text-slate-900 md:text-4xl">
+            {event.title}
+          </h1>
+
+          {/* 基本情報エリア */}
+          <div className="mt-8 space-y-6">
+            {/* 開催日時 */}
+            <div className="flex gap-4">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-400">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-[10px] font-black tracking-widest text-slate-400">開催日時</p>
+                <p className="mt-1 text-sm font-bold">
+                  {formatDate(startDate)}
+                  {endDate && ` 〜 `}
+                  {endDate && formatDate(endDate)}
+                </p>
+              </div>
+            </div>
+
+            {/* 開催場所 */}
+            <div className="flex gap-4">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-400">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-[10px] font-black tracking-widest text-slate-400">場所</p>
+                <p className="mt-1 text-sm font-bold">{event.location}</p>
+                {event.address && <p className="text-xs font-medium text-slate-500 mt-0.5">{event.address}</p>}
+              </div>
+            </div>
+
+            {/* 料金 */}
+            <div className="flex gap-4">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-400">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-[10px] font-black tracking-widest text-slate-400">料金</p>
+                <p className="mt-1 text-sm font-bold">{event.is_free ? "無料" : event.price || event.fee_text}</p>
+              </div>
+            </div>
           </div>
 
+          {/* イベント詳細文 */}
           {event.description && (
-            <div className="mt-12 whitespace-pre-wrap text-sm text-slate-600">{event.description}</div>
-          )}
-
-          {event.image_url && (
-            <div className="mt-12 max-w-sm mx-auto">
-              <img src={event.image_url} alt="" className="rounded-2xl shadow-lg w-full" />
+            <div className="mt-12">
+              <p className="text-[10px] font-black tracking-widest text-slate-400 mb-4">イベント詳細</p>
+              <div className="whitespace-pre-wrap text-sm font-medium leading-relaxed text-slate-600">
+                {event.description}
+              </div>
             </div>
           )}
 
-          {(event.url || event.external_url) && (
+          {/* チラシ・画像エリア */}
+          {flyerImage && (
             <div className="mt-12">
-              <a href={event.url || event.external_url} target="_blank" className="block w-full py-4 bg-black text-white text-center rounded-full font-black text-sm">公式サイトを見る</a>
+              <p className="text-[10px] font-black tracking-widest text-slate-400 mb-4">チラシ・画像</p>
+              <div className="max-w-sm mx-auto relative overflow-hidden rounded-2xl bg-slate-50 border border-slate-100 shadow-lg shadow-slate-100/50">
+                <img
+                  src={flyerImage}
+                  alt={event.title}
+                  className="h-auto w-full object-cover"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* 公式リンクボタン */}
+          {officialLink && officialLink.trim() !== "" && (
+            <div className="mt-12">
+              <a
+                href={officialLink.startsWith('http') ? officialLink : `https://${officialLink}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex w-full items-center justify-center rounded-full bg-slate-900 px-8 py-4 text-sm font-black text-white transition-all hover:bg-slate-800 active:scale-95 shadow-xl shadow-slate-200"
+              >
+                公式サイトを見る
+                <svg className="ml-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </a>
             </div>
           )}
         </div>
