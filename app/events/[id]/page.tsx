@@ -36,23 +36,22 @@ export default async function EventDetailPage({
 
   return (
     <div className="min-h-screen bg-white pb-20 text-slate-900">
-      {/* ヘッダーナビゲーション */}
-      <nav className="sticky top-0 z-10 flex items-center justify-between bg-white/80 px-6 py-4 backdrop-blur-md">
+      {/* ヘッダーナビゲーション（Backボタンのみに整理） */}
+      <nav className="sticky top-0 z-10 flex items-center bg-white/80 px-6 py-4 backdrop-blur-md">
         <Link href="/" className="text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-900">
           ← Back
         </Link>
-        <div className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-black uppercase tracking-tighter text-slate-500">
-          {event.category}
-        </div>
       </nav>
 
       <main className="mx-auto max-w-2xl px-6">
-        {/* ★ここにあった画像表示エリアを削除しました */}
-
         <div className="mt-8">
+          {/* カテゴリと地区をタイトルの上に配置 */}
           <div className="flex items-center gap-2 mb-4">
             <span className="rounded-md bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-600 border border-emerald-100">
               {event.area}
+            </span>
+            <span className="rounded-md bg-slate-100 px-2 py-1 text-[10px] font-black uppercase tracking-tighter text-slate-500">
+              {event.category}
             </span>
           </div>
           
@@ -118,11 +117,10 @@ export default async function EventDetailPage({
             </div>
           )}
 
-          {/* ★修正ポイント：画像を一番下（外部リンクボタンの上）へ移動、サイズを控えめに調整 */}
+          {/* チラシ・画像エリア（一番下に配置） */}
           {event.image_url && (
             <div className="mt-12">
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Flyer / Image</p>
-              {/* max-w-sm (最大幅を小さく) と mx-auto (中央寄せ) を追加 */}
               <div className="max-w-sm mx-auto relative overflow-hidden rounded-2xl bg-slate-50 border border-slate-100 shadow-lg shadow-slate-100/50">
                 <img
                   src={event.image_url}
@@ -133,11 +131,11 @@ export default async function EventDetailPage({
             </div>
           )}
 
-          {/* 外部リンクボタン */}
-          {event.url && (
+          {/* 外部リンクボタン（url または external_url のどちらかがあれば表示） */}
+          {(event.url || event.external_url) && (
             <div className="mt-12">
               <a
-                href={event.url}
+                href={event.url || event.external_url}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex w-full items-center justify-center rounded-full bg-slate-900 px-8 py-4 text-sm font-black text-white transition-all hover:bg-slate-800 active:scale-95 shadow-xl shadow-slate-200"
