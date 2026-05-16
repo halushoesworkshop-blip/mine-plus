@@ -52,7 +52,7 @@ export default function NewEventPage() {
     });
   }, [supabase]);
 
-  // ★修正：startAtLocal（開始日時）の必須条件を外しました
+  // 送信ボタンが活性化する条件（タイトル、地区、場所さえあれば、日時は空でも押せる）
   const canSubmit = !!userId && form.title.trim().length > 0 && form.area.trim().length > 0 && form.location.trim().length > 0;
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -74,7 +74,6 @@ export default function NewEventPage() {
         imageUrl = publicUrlData.publicUrl;
       }
 
-      // ★修正：空っぽなら null をデータベースに送る
       const start_at = form.startAtLocal ? toTimestamptzFromLocalInput(form.startAtLocal) : null;
       const end_at = form.endAtLocal ? toTimestamptzFromLocalInput(form.endAtLocal) : null;
       const capacity = form.capacity.trim().length > 0 ? Number(form.capacity) : null;
@@ -129,16 +128,19 @@ export default function NewEventPage() {
         ) : (
           <form onSubmit={onSubmit} className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
             <div className="grid gap-6">
+              {/* タイトル */}
               <div>
                 <label className="text-sm font-semibold text-slate-800">タイトル *</label>
                 <input value={form.title} onChange={(e) => setForm(p => ({ ...p, title: e.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-emerald-500 focus:ring-emerald-500" required />
               </div>
 
+              {/* チラシ・画像 */}
               <div>
                 <label className="text-sm font-semibold text-slate-800">チラシ・画像</label>
                 <input type="file" accept="image/jpeg, image/png, image/webp" onChange={(e) => setImageFile(e.target.files?.[0] || null)} className="mt-2 w-full text-sm text-slate-500 file:mr-4 file:py-3 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer border border-slate-200 rounded-xl p-2" />
               </div>
 
+              {/* 地区・カテゴリ */}
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <label className="text-sm font-semibold text-slate-800">地区 *</label>
@@ -157,33 +159,39 @@ export default function NewEventPage() {
                 </div>
               </div>
 
+              {/* 日時エリア */}
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  {/* ★修正：「開始日時」を（任意）に変更し、required を削除しました */}
+                  {/* ★修正：開始日時の input から required を完全に削除しました */}
                   <label className="text-sm font-semibold text-slate-800">開始日時（任意）</label>
                   <input type="datetime-local" value={form.startAtLocal} onChange={(e) => setForm(p => ({ ...p, startAtLocal: e.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
                 </div>
                 <div>
+                  {/* ★修正：終了日時の input からも required が無いことを確認 */}
                   <label className="text-sm font-semibold text-slate-800">終了日時（任意）</label>
                   <input type="datetime-local" value={form.endAtLocal} onChange={(e) => setForm(p => ({ ...p, endAtLocal: e.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
                 </div>
               </div>
 
+              {/* 場所 */}
               <div>
                 <label className="text-sm font-semibold text-slate-800">開催場所の名前 *</label>
                 <input value={form.location} onChange={(e) => setForm(p => ({ ...p, location: e.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-emerald-500 focus:ring-emerald-500" required />
               </div>
 
+              {/* 関連URL */}
               <div>
                 <label className="text-sm font-semibold text-slate-800">関連URL（任意）</label>
                 <input type="url" value={form.externalUrl} onChange={(e) => setForm(p => ({ ...p, externalUrl: e.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
               </div>
 
+              {/* 詳細 */}
               <div>
                 <label className="text-sm font-semibold text-slate-800">イベントの詳細</label>
                 <textarea value={form.description} onChange={(e) => setForm(p => ({ ...p, description: e.target.value }))} className="mt-2 w-full min-h-[120px] rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
               </div>
 
+              {/* 料金 */}
               <div className="flex flex-col gap-2 p-4 bg-slate-50 rounded-xl border border-slate-100">
                  <label className="text-sm font-semibold text-slate-800">参加費・料金</label>
                  <div className="flex items-center gap-4 mt-1">
