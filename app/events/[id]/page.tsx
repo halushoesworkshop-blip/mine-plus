@@ -11,10 +11,8 @@ export default async function EventDetailPage({
   const { id } = await params;
   const supabase = await createSupabaseServerClient();
 
-  // ログインユーザーを取得
   const { data: { user } } = await supabase.auth.getUser();
 
-  // イベント情報を取得
   const { data: event, error } = await supabase
     .from("events")
     .select("*")
@@ -25,10 +23,10 @@ export default async function EventDetailPage({
     notFound();
   }
 
-  // 本人判定
   const isOwner = user && user.id === event.user_id;
 
-  const startDate = new Date(event.start_at);
+  // ★修正：start_at が無い（null）場合は null のまま扱う
+  const startDate = event.start_at ? new Date(event.start_at) : null;
   const endDate = event.end_at ? new Date(event.end_at) : null;
 
   const formatDate = (date: Date) => {
@@ -38,25 +36,15 @@ export default async function EventDetailPage({
   };
 
   const flyerImage = event.image_url;
-  const officialLink = event.external_url || event.url; // どちらの列名でも対応
+  const officialLink = event.external_url || event.url;
 
   return (
     <div className="min-h-screen bg-white pb-20 text-slate-900">
-      {/* ナビゲーション */}
       <nav className="sticky top-0 z-10 flex items-center justify-between bg-white/80 px-6 py-4 backdrop-blur-md">
-        <Link href="/" className="text-xs font-black tracking-widest text-slate-400 hover:text-slate-900">
-          ← 戻る
-        </Link>
-
-        {/* 編集・削除ボタン（本人のみ表示） */}
+        <Link href="/" className="text-xs font-black tracking-widest text-slate-400 hover:text-slate-900">← 戻る</Link>
         {isOwner && (
           <div className="flex items-center gap-4">
-            <Link 
-              href={`/events/${id}/edit`} 
-              className="text-[10px] font-black tracking-widest text-slate-400 hover:text-emerald-600 transition-colors"
-            >
-              編集
-            </Link>
+            <Link href={`/events/${id}/edit`} className="text-[10px] font-black tracking-widest text-slate-400 hover:text-emerald-600 transition-colors">編集</Link>
             <DeleteButton eventId={id} />
           </div>
         )}
@@ -64,24 +52,14 @@ export default async function EventDetailPage({
 
       <main className="mx-auto max-w-2xl px-6">
         <div className="mt-8">
-          {/* カテゴリと地区 */}
           <div className="flex items-center gap-2 mb-4">
-            <span className="rounded-md bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-600 border border-emerald-100">
-              {event.area}
-            </span>
-            <span className="rounded-md bg-slate-100 px-2 py-1 text-[10px] font-black uppercase tracking-tighter text-slate-500">
-              {event.category}
-            </span>
+            <span className="rounded-md bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-600 border border-emerald-100">{event.area}</span>
+            <span className="rounded-md bg-slate-100 px-2 py-1 text-[10px] font-black uppercase tracking-tighter text-slate-500">{event.category}</span>
           </div>
           
-          {/* タイトル */}
-          <h1 className="text-3xl font-black leading-tight tracking-tighter text-slate-900 md:text-4xl">
-            {event.title}
-          </h1>
+          <h1 className="text-3xl font-black leading-tight tracking-tighter text-slate-900 md:text-4xl">{event.title}</h1>
 
-          {/* 基本情報エリア */}
           <div className="mt-8 space-y-6">
-            {/* 開催日時 */}
             <div className="flex gap-4">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-400">
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -91,14 +69,20 @@ export default async function EventDetailPage({
               <div>
                 <p className="text-[10px] font-black tracking-widest text-slate-400">開催日時</p>
                 <p className="mt-1 text-sm font-bold">
-                  {formatDate(startDate)}
-                  {endDate && ` 〜 `}
-                  {endDate && formatDate(endDate)}
+                  {/* ★修正：開始日時も終了日時もない場合は「未定」と表示 */}
+                  {!startDate && !endDate ? (
+                    "未定"
+                  ) : (
+                    <>
+                      {startDate ? formatDate(startDate) : "未定"}
+                      {endDate && ` 〜 `}
+                      {endDate && formatDate(endDate)}
+                    </>
+                  )}
                 </p>
               </div>
             </div>
 
-            {/* 開催場所 */}
             <div className="flex gap-4">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-400">
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -113,7 +97,6 @@ export default async function EventDetailPage({
               </div>
             </div>
 
-            {/* 料金 */}
             <div className="flex gap-4">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-400">
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -127,43 +110,26 @@ export default async function EventDetailPage({
             </div>
           </div>
 
-          {/* イベント詳細文 */}
           {event.description && (
             <div className="mt-12">
               <p className="text-[10px] font-black tracking-widest text-slate-400 mb-4">イベント詳細</p>
-              <div className="whitespace-pre-wrap text-sm font-medium leading-relaxed text-slate-600">
-                {event.description}
-              </div>
+              <div className="whitespace-pre-wrap text-sm font-medium leading-relaxed text-slate-600">{event.description}</div>
             </div>
           )}
 
-          {/* チラシ・画像エリア */}
           {flyerImage && (
             <div className="mt-12">
               <p className="text-[10px] font-black tracking-widest text-slate-400 mb-4">チラシ・画像</p>
               <div className="max-w-sm mx-auto relative overflow-hidden rounded-2xl bg-slate-50 border border-slate-100 shadow-lg shadow-slate-100/50">
-                <img
-                  src={flyerImage}
-                  alt={event.title}
-                  className="h-auto w-full object-cover"
-                />
+                <img src={flyerImage} alt={event.title} className="h-auto w-full object-cover" />
               </div>
             </div>
           )}
 
-          {/* 公式リンクボタン */}
           {officialLink && officialLink.trim() !== "" && (
             <div className="mt-12">
-              <a
-                href={officialLink.startsWith('http') ? officialLink : `https://${officialLink}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex w-full items-center justify-center rounded-full bg-slate-900 px-8 py-4 text-sm font-black text-white transition-all hover:bg-slate-800 active:scale-95 shadow-xl shadow-slate-200"
-              >
+              <a href={officialLink.startsWith('http') ? officialLink : `https://${officialLink}`} target="_blank" rel="noopener noreferrer" className="inline-flex w-full items-center justify-center rounded-full bg-slate-900 px-8 py-4 text-sm font-black text-white transition-all hover:bg-slate-800 active:scale-95 shadow-xl shadow-slate-200">
                 公式サイトを見る
-                <svg className="ml-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                </svg>
               </a>
             </div>
           )}
