@@ -6,20 +6,30 @@ import SiteHeader from "@/components/SiteHeader";
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 
-// ★修正：dateString が無い（null）場合のエラーを防ぐガードを追加しました
+// ★修正：ホーム画面でも「00:00」の場合は日付だけ表示するロジックを反映しました
 function formatEventDate(dateString: string | null) {
-  if (!dateString) return "未定"; // 空っぽなら「未定」を返す
+  if (!dateString) return "未定";
 
   const isUTC = dateString.includes('Z') || dateString.includes('+');
   const safeDateString = isUTC ? dateString : dateString + '+09:00';
   const date = new Date(safeDateString);
 
-  // 万が一、不正な日付データだった場合もエラーを防ぐ
   if (Number.isNaN(date.getTime())) return "未定";
 
-  return new Intl.DateTimeFormat("ja-JP", {
-    timeZone: "Asia/Tokyo", month: "short", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit",
+  const dateStr = new Intl.DateTimeFormat("ja-JP", {
+    timeZone: "Asia/Tokyo", month: "short", day: "numeric", weekday: "short",
   }).format(date);
+
+  const timeStr = new Intl.DateTimeFormat("ja-JP", {
+    timeZone: "Asia/Tokyo", hour: "2-digit", minute: "2-digit",
+  }).format(date);
+
+  // 時間が「00:00」の場合は日付のみ返す
+  if (timeStr === "00:00" || timeStr === "0:00") {
+    return dateStr;
+  }
+  
+  return `${dateStr} ${timeStr}`;
 }
 
 export default async function Home(props: { searchParams: Promise<{ category?: string; area?: string }> }) {

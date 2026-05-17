@@ -28,12 +28,25 @@ export default async function EventDetailPage({
   const startDate = event.start_at ? new Date(event.start_at) : null;
   const endDate = event.end_at ? new Date(event.end_at) : null;
 
-  // ★修正：Vercelの標準時（UTC）に引っ張られないよう、日本時間を強制します！
+  // ★修正：時間が「00:00」の場合は日付だけを返すように調整しました
   const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat("ja-JP", {
-      timeZone: "Asia/Tokyo", // ← これが時差ズレを防ぐ魔法の1行です
-      year: "numeric", month: "long", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit",
+    const dateStr = new Intl.DateTimeFormat("ja-JP", {
+      timeZone: "Asia/Tokyo",
+      year: "numeric", month: "long", day: "numeric", weekday: "short",
     }).format(date);
+
+    const timeStr = new Intl.DateTimeFormat("ja-JP", {
+      timeZone: "Asia/Tokyo",
+      hour: "2-digit", minute: "2-digit",
+    }).format(date);
+
+    // 時間が入力されていない（00:00になっている）場合は日付だけを返す
+    if (timeStr === "00:00" || timeStr === "0:00") {
+      return dateStr;
+    }
+    
+    // 時間がある場合は「日付 時間」を返す
+    return `${dateStr} ${timeStr}`;
   };
 
   const flyerImage = event.image_url;
