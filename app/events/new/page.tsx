@@ -13,8 +13,10 @@ type FormState = {
   area: string;
   location: string;
   address: string;
-  startAtLocal: string;
-  endAtLocal: string;
+  startDate: string; // ★ 分割
+  startTime: string; // ★ 分割
+  endDate: string;   // ★ 分割
+  endTime: string;   // ★ 分割
   category: EventCategory;
   isFree: boolean;
   feeText: string;
@@ -27,12 +29,6 @@ const categoryLabels: Record<EventCategory, string> = {
   music: "Music", sports: "Sports", food: "Food", art: "Art", festival: "Festival", workshop: "Workshop", market: "Market", other: "Other",
 };
 
-function toTimestamptzFromLocalInput(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toISOString();
-}
-
 export default function NewEventPage() {
   const router = useRouter();
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
@@ -43,7 +39,7 @@ export default function NewEventPage() {
   const [imageFile, setImageFile] = useState<File | null>(null);
 
   const [form, setForm] = useState<FormState>({
-    title: "", description: "", area: "", location: "", address: "", startAtLocal: "", endAtLocal: "", category: "festival", isFree: true, feeText: "", capacity: "", contactInfo: "", externalUrl: "",
+    title: "", description: "", area: "", location: "", address: "", startDate: "", startTime: "", endDate: "", endTime: "", category: "festival", isFree: true, feeText: "", capacity: "", contactInfo: "", externalUrl: "",
   });
 
   useEffect(() => {
@@ -52,7 +48,6 @@ export default function NewEventPage() {
     });
   }, [supabase]);
 
-  // 送信ボタンが活性化する条件（タイトル、地区、場所さえあれば、日時は空でも押せる）
   const canSubmit = !!userId && form.title.trim().length > 0 && form.area.trim().length > 0 && form.location.trim().length > 0;
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -74,8 +69,10 @@ export default function NewEventPage() {
         imageUrl = publicUrlData.publicUrl;
       }
 
-      const start_at = form.startAtLocal ? toTimestamptzFromLocalInput(form.startAtLocal) : null;
-      const end_at = form.endAtLocal ? toTimestamptzFromLocalInput(form.endAtLocal) : null;
+      // ★ 日付と時間をくっつけて保存データを作る（時間が空なら00:00にする）
+      const start_at = form.startDate ? new Date(`${form.startDate}T${form.startTime || "00:00"}:00`).toISOString() : null;
+      const end_at = form.endDate ? new Date(`${form.endDate}T${form.endTime || "00:00"}:00`).toISOString() : null;
+      
       const capacity = form.capacity.trim().length > 0 ? Number(form.capacity) : null;
 
       const payload = {
@@ -90,7 +87,7 @@ export default function NewEventPage() {
         category: form.category,
         is_free: form.isFree,
         fee_text: form.isFree ? null : form.feeText.trim() || null,
-        price: form.isFree ? "無料" : form.feeText.trim(),
+        price: form.isFree ? "無料" : form.feeText.trim() || null,
         capacity,
         contact_info: form.contactInfo.trim() || null,
         external_url: form.externalUrl.trim() || null,
@@ -113,100 +110,93 @@ export default function NewEventPage() {
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <main className="mx-auto w-full max-w-2xl px-6 py-10 md:px-10 md:py-14">
         <div className="mb-8 flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium tracking-wide text-emerald-700">NEW EVENT</p>
-            <h1 className="mt-2 text-2xl font-bold md:text-3xl">新しいイベントを投稿</h1>
-          </div>
+          <div><p className="text-sm font-medium tracking-wide text-emerald-700">NEW EVENT</p><h1 className="mt-2 text-2xl font-bold md:text-3xl">新しいイベントを投稿</h1></div>
           <Link href="/" className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50">戻る</Link>
         </div>
 
         {!userId ? (
-          <div className="rounded-2xl bg-white p-10 shadow-sm ring-1 ring-slate-200 text-center">
-            <p className="text-slate-700 mb-4">投稿するにはログインが必要です。</p>
-            <Link href="/login?next=/events/new" className="rounded-full bg-emerald-600 px-8 py-3 font-bold text-white">ログイン画面へ</Link>
-          </div>
+          <div className="rounded-2xl bg-white p-10 text-center"><p className="text-slate-700 mb-4">投稿するにはログインが必要です。</p><Link href="/login?next=/events/new" className="rounded-full bg-emerald-600 px-8 py-3 font-bold text-white">ログイン画面へ</Link></div>
         ) : (
           <form onSubmit={onSubmit} className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
             <div className="grid gap-6">
-              {/* タイトル */}
               <div>
                 <label className="text-sm font-semibold text-slate-800">タイトル *</label>
                 <input value={form.title} onChange={(e) => setForm(p => ({ ...p, title: e.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-emerald-500 focus:ring-emerald-500" required />
               </div>
 
-              {/* チラシ・画像 */}
               <div>
                 <label className="text-sm font-semibold text-slate-800">チラシ・画像</label>
-                <input type="file" accept="image/jpeg, image/png, image/webp" onChange={(e) => setImageFile(e.target.files?.[0] || null)} className="mt-2 w-full text-sm text-slate-500 file:mr-4 file:py-3 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer border border-slate-200 rounded-xl p-2" />
+                <input type="file" accept="image/jpeg, image/png, image/webp" onChange={(e) => setImageFile(e.target.files?.[0] || null)} className="mt-2 w-full text-sm text-slate-500 file:mr-4 file:py-3 file:px-4 file:rounded-xl border border-slate-200 p-2 cursor-pointer" />
               </div>
 
-              {/* 地区・カテゴリ */}
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <label className="text-sm font-semibold text-slate-800">地区 *</label>
-                  <select value={form.area} onChange={(e) => setForm(p => ({ ...p, area: e.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-emerald-500 focus:ring-emerald-500" required>
-                    <option value="" disabled>地区を選択してください</option>
-                    <option value="美祢地区">美祢地区</option>
-                    <option value="秋芳地区">秋芳地区</option>
-                    <option value="美東地区">美東地区</option>
+                  <select value={form.area} onChange={(e) => setForm(p => ({ ...p, area: e.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm" required>
+                    <option value="" disabled>地区を選択してください</option><option value="美祢地区">美祢地区</option><option value="秋芳地区">秋芳地区</option><option value="美東地区">美東地区</option>
                   </select>
                 </div>
                 <div>
                   <label className="text-sm font-semibold text-slate-800">カテゴリ *</label>
-                  <select value={form.category} onChange={(e) => setForm(p => ({ ...p, category: e.target.value as EventCategory }))} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-emerald-500 focus:ring-emerald-500">
+                  <select value={form.category} onChange={(e) => setForm(p => ({ ...p, category: e.target.value as EventCategory }))} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm">
                     {(Object.keys(categoryLabels) as EventCategory[]).map(key => <option key={key} value={key}>{categoryLabels[key]}</option>)}
                   </select>
                 </div>
               </div>
 
-              {/* 日時エリア */}
-              <div className="grid gap-4 md:grid-cols-2">
+              {/* ★ 修正：日付と時間を別々の入力欄に分けました */}
+              <div className="grid gap-4 md:grid-cols-2 p-4 bg-slate-50 rounded-xl border border-slate-100">
                 <div>
-                  {/* ★修正：開始日時の input から required を完全に削除しました */}
-                  <label className="text-sm font-semibold text-slate-800">開始日時（任意）</label>
-                  <input type="datetime-local" value={form.startAtLocal} onChange={(e) => setForm(p => ({ ...p, startAtLocal: e.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
+                  <label className="text-sm font-semibold text-slate-800">開始日（任意）</label>
+                  <input type="date" value={form.startDate} onChange={(e) => setForm(p => ({ ...p, startDate: e.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm" />
                 </div>
                 <div>
-                  {/* ★修正：終了日時の input からも required が無いことを確認 */}
-                  <label className="text-sm font-semibold text-slate-800">終了日時（任意）</label>
-                  <input type="datetime-local" value={form.endAtLocal} onChange={(e) => setForm(p => ({ ...p, endAtLocal: e.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
+                  <label className="text-sm font-semibold text-slate-800">開始時間（任意）</label>
+                  <input type="time" value={form.startTime} onChange={(e) => setForm(p => ({ ...p, startTime: e.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm" />
                 </div>
               </div>
 
-              {/* 場所 */}
+              <div className="grid gap-4 md:grid-cols-2 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                <div>
+                  <label className="text-sm font-semibold text-slate-800">終了日（任意）</label>
+                  <input type="date" value={form.endDate} onChange={(e) => setForm(p => ({ ...p, endDate: e.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm" />
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-slate-800">終了時間（任意）</label>
+                  <input type="time" value={form.endTime} onChange={(e) => setForm(p => ({ ...p, endTime: e.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm" />
+                </div>
+              </div>
+
               <div>
                 <label className="text-sm font-semibold text-slate-800">開催場所の名前 *</label>
-                <input value={form.location} onChange={(e) => setForm(p => ({ ...p, location: e.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-emerald-500 focus:ring-emerald-500" required />
+                <input value={form.location} onChange={(e) => setForm(p => ({ ...p, location: e.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm" required />
               </div>
 
-              {/* 関連URL */}
               <div>
                 <label className="text-sm font-semibold text-slate-800">関連URL（任意）</label>
-                <input type="url" value={form.externalUrl} onChange={(e) => setForm(p => ({ ...p, externalUrl: e.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
+                <input type="url" value={form.externalUrl} onChange={(e) => setForm(p => ({ ...p, externalUrl: e.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm" />
               </div>
 
-              {/* 詳細 */}
               <div>
                 <label className="text-sm font-semibold text-slate-800">イベントの詳細</label>
-                <textarea value={form.description} onChange={(e) => setForm(p => ({ ...p, description: e.target.value }))} className="mt-2 w-full min-h-[120px] rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-emerald-500 focus:ring-emerald-500" />
+                <textarea value={form.description} onChange={(e) => setForm(p => ({ ...p, description: e.target.value }))} className="mt-2 w-full min-h-[120px] rounded-xl border border-slate-200 px-4 py-3 text-sm" />
               </div>
 
-              {/* 料金 */}
               <div className="flex flex-col gap-2 p-4 bg-slate-50 rounded-xl border border-slate-100">
                  <label className="text-sm font-semibold text-slate-800">参加費・料金</label>
                  <div className="flex items-center gap-4 mt-1">
                    <label className="flex items-center gap-2 cursor-pointer">
-                     <input type="checkbox" checked={form.isFree} onChange={(e) => setForm(p => ({ ...p, isFree: e.target.checked, feeText: e.target.checked ? "" : p.feeText }))} className="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500" />
+                     <input type="checkbox" checked={form.isFree} onChange={(e) => setForm(p => ({ ...p, isFree: e.target.checked, feeText: e.target.checked ? "" : p.feeText }))} className="w-5 h-5 text-emerald-600 rounded" />
                      <span className="text-sm font-bold text-slate-700">無料</span>
                    </label>
-                   {!form.isFree && <input value={form.feeText} onChange={(e) => setForm(p => ({ ...p, feeText: e.target.value }))} className="flex-1 rounded-lg border border-slate-200 px-4 py-2 text-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="例：大人 500円" required />}
+                   {!form.isFree && <input value={form.feeText} onChange={(e) => setForm(p => ({ ...p, feeText: e.target.value }))} className="flex-1 rounded-lg border border-slate-200 px-4 py-2 text-sm" placeholder="例：大人 500円" />}
                  </div>
               </div>
 
               {error && <div className="rounded-xl bg-rose-50 p-4 text-sm text-rose-600 font-bold border border-rose-100">{error}</div>}
 
               <div className="flex justify-end pt-4">
-                <button type="submit" disabled={!canSubmit || loading} className="rounded-full bg-emerald-600 px-10 py-4 font-bold text-white shadow-lg hover:bg-emerald-700 disabled:bg-slate-300 transition-all active:scale-95">
+                <button type="submit" disabled={!canSubmit || loading} className="rounded-full bg-emerald-600 px-10 py-4 font-bold text-white shadow-lg hover:bg-emerald-700 disabled:bg-slate-300">
                   {loading ? "送信中..." : "イベントを投稿する"}
                 </button>
               </div>
