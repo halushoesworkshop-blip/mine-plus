@@ -1,5 +1,5 @@
 import { createSupabaseServerClient } from "@/src/utils/supabase/server";
-import { notFound } from "next/navigation"; // ★ここを修正しました！
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import DeleteButton from "@/components/DeleteButton";
 
@@ -28,10 +28,12 @@ export default async function EventDetailPage({
   const startDate = event.start_at ? new Date(event.start_at) : null;
   const endDate = event.end_at ? new Date(event.end_at) : null;
 
+  // ★修正：Vercelの標準時（UTC）に引っ張られないよう、日本時間を強制します！
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString("ja-JP", {
+    return new Intl.DateTimeFormat("ja-JP", {
+      timeZone: "Asia/Tokyo", // ← これが時差ズレを防ぐ魔法の1行です
       year: "numeric", month: "long", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit",
-    });
+    }).format(date);
   };
 
   const flyerImage = event.image_url;
