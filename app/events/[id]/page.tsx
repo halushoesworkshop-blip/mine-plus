@@ -1,5 +1,5 @@
 import { createSupabaseServerClient } from "@/src/utils/supabase/server";
-import { notFound } from "next/navigation";
+import { notFound } from "next/navigation"; // ★ここを修正しました！
 import Link from "next/link";
 import DeleteButton from "@/components/DeleteButton";
 
@@ -25,7 +25,6 @@ export default async function EventDetailPage({
 
   const isOwner = user && user.id === event.user_id;
 
-  // ★修正：start_at が無い（null）場合は null のまま扱う
   const startDate = event.start_at ? new Date(event.start_at) : null;
   const endDate = event.end_at ? new Date(event.end_at) : null;
 
@@ -41,10 +40,10 @@ export default async function EventDetailPage({
   return (
     <div className="min-h-screen bg-white pb-20 text-slate-900">
       <nav className="sticky top-0 z-10 flex items-center justify-between bg-white/80 px-6 py-4 backdrop-blur-md">
-        <Link href="/" className="text-xs font-black tracking-widest text-slate-400 hover:text-slate-900">← 戻る</Link>
+        <Link href="/" className="text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-900">← 戻る</Link>
         {isOwner && (
           <div className="flex items-center gap-4">
-            <Link href={`/events/${id}/edit`} className="text-[10px] font-black tracking-widest text-slate-400 hover:text-emerald-600 transition-colors">編集</Link>
+            <Link href={`/events/${id}/edit`} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-emerald-600 transition-colors">編集</Link>
             <DeleteButton eventId={id} />
           </div>
         )}
@@ -69,16 +68,7 @@ export default async function EventDetailPage({
               <div>
                 <p className="text-[10px] font-black tracking-widest text-slate-400">開催日時</p>
                 <p className="mt-1 text-sm font-bold">
-                  {/* ★修正：開始日時も終了日時もない場合は「未定」と表示 */}
-                  {!startDate && !endDate ? (
-                    "未定"
-                  ) : (
-                    <>
-                      {startDate ? formatDate(startDate) : "未定"}
-                      {endDate && ` 〜 `}
-                      {endDate && formatDate(endDate)}
-                    </>
-                  )}
+                  {!startDate && !endDate ? "未定" : <>{startDate ? formatDate(startDate) : "未定"}{endDate && ` 〜 `}{endDate && formatDate(endDate)}</>}
                 </p>
               </div>
             </div>
@@ -87,7 +77,6 @@ export default async function EventDetailPage({
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-400">
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
               </div>
               <div>
@@ -105,7 +94,9 @@ export default async function EventDetailPage({
               </div>
               <div>
                 <p className="text-[10px] font-black tracking-widest text-slate-400">料金</p>
-                <p className="mt-1 text-sm font-bold">{event.is_free ? "無料" : event.price || event.fee_text}</p>
+                <p className="mt-1 text-sm font-bold">
+                  {event.is_free ? "無料" : (event.price || event.fee_text || "未定 / 要問合せ")}
+                </p>
               </div>
             </div>
           </div>

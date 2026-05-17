@@ -13,10 +13,10 @@ type FormState = {
   area: string;
   location: string;
   address: string;
-  startDate: string; // ★ 分割
-  startTime: string; // ★ 分割
-  endDate: string;   // ★ 分割
-  endTime: string;   // ★ 分割
+  startDate: string;
+  startTime: string;
+  endDate: string;
+  endTime: string;
   category: EventCategory;
   isFree: boolean;
   feeText: string;
@@ -69,7 +69,6 @@ export default function NewEventPage() {
         imageUrl = publicUrlData.publicUrl;
       }
 
-      // ★ 日付と時間をくっつけて保存データを作る（時間が空なら00:00にする）
       const start_at = form.startDate ? new Date(`${form.startDate}T${form.startTime || "00:00"}:00`).toISOString() : null;
       const end_at = form.endDate ? new Date(`${form.endDate}T${form.endTime || "00:00"}:00`).toISOString() : null;
       
@@ -144,7 +143,6 @@ export default function NewEventPage() {
                 </div>
               </div>
 
-              {/* ★ 修正：日付と時間を別々の入力欄に分けました */}
               <div className="grid gap-4 md:grid-cols-2 p-4 bg-slate-50 rounded-xl border border-slate-100">
                 <div>
                   <label className="text-sm font-semibold text-slate-800">開始日（任意）</label>
