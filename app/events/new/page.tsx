@@ -59,17 +59,19 @@ export default function NewEventPage() {
     setLoading(true);
 
     try {
-      // 🧪 テスト1: 画像アップロードを完全にスキップして null にする
       let imageUrl = null;
+      if (imageFile) {
+        const fileExt = imageFile.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage.from('event-images').upload(fileName, imageFile, { cacheControl: '3600', upsert: false });
+        if (uploadError) throw new Error(`画像のアップロードに失敗: ${uploadError.message}`);
+        const { data: publicUrlData } = supabase.storage.from('event-images').getPublicUrl(fileName);
+        imageUrl = publicUrlData.publicUrl;
+      }
 
-      // 🧪 テスト2: 日付を確実に入れて Supabase の NOT NULL エラーを防ぐ
-      // もし未入力だったら、一旦今日のデータを入れてテストします
-      const start_at = form.startDate 
-        ? new Date(`${form.startDate}T${form.startTime || "00:00"}:00`).toISOString() 
-        : new Date().toISOString(); 
-      const end_at = form.endDate 
-        ? new Date(`${form.endDate}T${form.endTime || "00:00"}:00`).toISOString() 
-        : new Date().toISOString();
+      // 日付が入力されていなければしっかり null（空っぽ）にしてデータベースに送る
+      const start_at = form.startDate ? new Date(`${form.startDate}T${form.startTime || "00:00"}:00`).toISOString() : null;
+      const end_at = form.endDate ? new Date(`${form.endDate}T${form.endTime || "00:00"}:00`).toISOString() : null;
       
       const capacity = form.capacity.trim().length > 0 ? Number(form.capacity) : null;
 
@@ -93,17 +95,37 @@ export default function NewEventPage() {
         status: "published",
       };
 
-      // 🧪 テスト3: 保存が成功するか確認
-      const { error: insertError } = await supabase.from("events").insert(payload);
-      if (insertError) throw new Error(`保存エラー: ${insertError.message}`);
+      // 🛠️ 安全装置：タイムアウト付きでデータベースへの保存をリクエストする
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000); // 4秒応答がなければ強制エラーにする
 
-      // 🧪 テスト4: 一旦Discord通知（API）への送信もコメントアウトして完全に止める
-      // fetch("/api/notify", { ... })
+      const { error: insertError } = await supabase
+        .from("events")
+        .insert(payload)
+        .abortSignal(controller.signal);
 
-      // ユーザーをホームへ戻す
+      clearTimeout(timeoutId);
+
+      if (insertError) {
+        throw new Error(`Supabase保存拒否エラー: ${insertError.message} (${insertError.code})`);
+      }
+
+      // 通知はAPI経由でバックグラウンド送信
+      fetch("/api/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: form.title,
+          category: categoryLabels[form.category],
+          location: form.location,
+        }),
+      }).catch((err) => console.error("❌ 通知API呼び出しに失敗:", err));
+
       router.push("/");
       router.refresh();
     } catch (err: any) {
+      console.error("投稿エラーの詳細:", err);
+      // 送信中を解除し、赤いボックスでエラー内容を画面に叩きつける
       setError(err.message || "予期せぬエラーが発生しました");
       setLoading(false);
     }
