@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { createSupabaseBrowserClient } from "@/src/utils/supabase/client";
-import { sendDiscordNotification } from "./notify";
 
 type EventCategory = "music" | "sports" | "food" | "art" | "festival" | "workshop" | "market" | "other";
 
@@ -58,23 +57,20 @@ export default function NewEventPage() {
     if (!userId) return setError("ログインユーザーの情報が取得できていません。");
 
     setLoading(true);
-    console.log("=== [ログ④] 投稿処理（onSubmit）がスタートしました ===");
 
     try {
+      // 🧪 テスト1: 画像アップロードを完全にスキップして null にする
       let imageUrl = null;
-      if (imageFile) {
-        console.log("--- 画像のアップロードを開始します ---");
-        const fileExt = imageFile.name.split('.').pop();
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-        const { error: uploadError } = await supabase.storage.from('event-images').upload(fileName, imageFile, { cacheControl: '3600', upsert: false });
-        if (uploadError) throw new Error(`画像のアップロードに失敗: ${uploadError.message}`);
-        const { data: publicUrlData } = supabase.storage.from('event-images').getPublicUrl(fileName);
-        imageUrl = publicUrlData.publicUrl;
-        console.log("--- 画像のアップロードが完了しました ---");
-      }
 
-      const start_at = form.startDate ? new Date(`${form.startDate}T${form.startTime || "00:00"}:00`).toISOString() : null;
-      const end_at = form.endDate ? new Date(`${form.endDate}T${form.endTime || "00:00"}:00`).toISOString() : null;
+      // 🧪 テスト2: 日付を確実に入れて Supabase の NOT NULL エラーを防ぐ
+      // もし未入力だったら、一旦今日のデータを入れてテストします
+      const start_at = form.startDate 
+        ? new Date(`${form.startDate}T${form.startTime || "00:00"}:00`).toISOString() 
+        : new Date().toISOString(); 
+      const end_at = form.endDate 
+        ? new Date(`${form.endDate}T${form.endTime || "00:00"}:00`).toISOString() 
+        : new Date().toISOString();
+      
       const capacity = form.capacity.trim().length > 0 ? Number(form.capacity) : null;
 
       const payload = {
@@ -97,21 +93,17 @@ export default function NewEventPage() {
         status: "published",
       };
 
-      console.log("=== [ログ⑤] Supabaseへデータを保存します ===");
+      // 🧪 テスト3: 保存が成功するか確認
       const { error: insertError } = await supabase.from("events").insert(payload);
       if (insertError) throw new Error(`保存エラー: ${insertError.message}`);
-      console.log("=== [ログ⑥] Supabaseへの保存が成功しました ===");
 
-      // 投げっぱなしの非同期でDiscord通知を実行
-      sendDiscordNotification(form.title, categoryLabels[form.category], form.location)
-        .catch(err => console.error("Discord通知の裏側エラー:", err));
+      // 🧪 テスト4: 一旦Discord通知（API）への送信もコメントアウトして完全に止める
+      // fetch("/api/notify", { ... })
 
-      console.log("=== [ログ⑦] ホーム画面への移動命令（router.push）を実行します ===");
+      // ユーザーをホームへ戻す
       router.push("/");
       router.refresh();
-      
     } catch (err: any) {
-      console.error("❌ [エラー] 投稿処理中に問題が発生しました:", err);
       setError(err.message || "予期せぬエラーが発生しました");
       setLoading(false);
     }
