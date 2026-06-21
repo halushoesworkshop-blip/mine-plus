@@ -6,8 +6,11 @@ import SiteHeader from "@/components/SiteHeader";
 // 爆速表示のための設定（1秒間はキャッシュを使い回し、裏で最新に更新する）
 export const revalidate = 1;
 
-// 時間のズレと抜けを両方防ぐフォーマット関数
-function formatEventDate(dateString: string) {
+// 時間のズレと抜けを両方防ぐフォーマット関数（時間が入力されていない「任意」の状態に対応）
+function formatEventDate(dateString: string | null) {
+  // もし日付が入力されていなかったら（空っぽなら）「未定」と表示して処理を終わらせる
+  if (!dateString) return "未定";
+
   const isUTC = dateString.includes('Z') || dateString.includes('+');
   const safeDateString = isUTC ? dateString : dateString + '+09:00';
   const date = new Date(safeDateString);
@@ -40,7 +43,7 @@ export default async function Home(props: { searchParams: Promise<{ category?: s
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-slate-900 font-sans selection:bg-lime-300">
-      {/* 新しいハンバーガーメニュー付きのヘッダー */}
+      {/* ハンバーガーメニュー付きのヘッダー */}
       <SiteHeader user={user} selectedCategory={selectedCategory} />
 
       <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-8 md:px-8 md:py-12">
@@ -51,7 +54,7 @@ export default async function Home(props: { searchParams: Promise<{ category?: s
             <EventCalendar events={filteredEvents} />
           </div>
 
-          {/* タイムラインエリア（スッキリ化＆詳細画面へのリンク付き） */}
+          {/* タイムラインエリア */}
           <div className="rounded-[32px] bg-white p-6 md:p-8 shadow-sm border border-slate-100 flex flex-col max-h-[700px] overflow-hidden">
             <h2 className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-300 mb-6 flex justify-between items-center">
               <span>Event Timeline</span>
@@ -76,6 +79,7 @@ export default async function Home(props: { searchParams: Promise<{ category?: s
                   </h3>
                   
                   <div className="flex flex-col gap-1 text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                    {/* ここで新しくなった時間フォーマット関数を呼び出しています */}
                     <span className="flex items-center gap-2 italic">Date : {formatEventDate(event.start_at)}</span>
                     <span className="flex items-center gap-2 italic max-w-full truncate">Loc : {event.location}</span>
                   </div>
