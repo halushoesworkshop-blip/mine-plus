@@ -94,6 +94,7 @@ export default function NewEventPage() {
         status: "published",
       };
 
+      // 1. Supabaseへのデータ保存
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 4000);
 
@@ -105,21 +106,38 @@ export default function NewEventPage() {
       clearTimeout(timeoutId);
 
       if (insertError) {
-        throw new Error(`Supabase保存拒否エラー: ${insertError.message} (${insertError.code})`);
+        throw new Error(`Supabase保存拒否エラー: ${insertError.message}`);
       }
 
-      // 🌟 最も確実な相対パス指定（/api/notify）に修正
-      console.log("=== 通知APIを呼び出します（絶対パス） ===");
-      fetch("/api/notify", {
+      // 2. 🎉 [解決策] URL迷子を無くすため、ここから直接Discordへリクエストを送信！
+      // Vercelを介さないため、本番環境でも絶対に強制終了（凍結）しません。
+      const webhookUrl = "https://discord.com/api/webhooks/1518271470197801010/y3koHUYOHUyTXJ2ClLegv0oUPZBr70hb0yMhje9Fyv65Fq5ngxw1FNV2fU5c1jIxZ9ZH";
+      // ⚠️ 上記のURL部分（""の中身）だけ、あなたがDiscordで新しく作成した「最新のWebhook URL」に上書きしてください。
+
+      const message = {
+        embeds: [
+          {
+            title: "🤖 新着イベントのお知らせ",
+            color: 3066993,
+            fields: [
+              { name: "📌 イベント名", value: form.title.trim(), inline: false },
+              { name: "🏷 カテゴリ", value: categoryLabels[form.category], inline: true },
+              { name: "📍 開催場所", value: form.location.trim(), inline: true }
+            ],
+            footer: { text: "mine+ アプリシステム通知" },
+            timestamp: new Date().toISOString()
+          }
+        ]
+      };
+
+      // 直接シュート！
+      fetch(webhookUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: form.title,
-          category: categoryLabels[form.category],
-          location: form.location,
-        }),
-      }).catch((err) => console.error("❌ 通知API呼び出しに失敗:", err));
+        body: JSON.stringify(message)
+      }).catch((err) => console.error("Discord直通送信に失敗:", err));
 
+      // 3. 即座にホームへ戻る
       router.push("/");
       router.refresh();
     } catch (err: any) {
