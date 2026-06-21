@@ -108,11 +108,9 @@ export default function NewEventPage() {
         throw new Error(`Supabase保存拒否エラー: ${insertError.message} (${insertError.code})`);
       }
 
-      // 🌟 APIの呼び出し先URLを本番環境のドメインに自動で追従する形に修正
-      const targetUrl = `${window.location.origin}/api/notify`;
-      console.log("=== 通知APIを呼び出します URL:", targetUrl);
-
-      fetch(targetUrl, {
+      // 🌟 最も確実な相対パス指定（/api/notify）に修正
+      console.log("=== 通知APIを呼び出します（絶対パス） ===");
+      fetch("/api/notify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
