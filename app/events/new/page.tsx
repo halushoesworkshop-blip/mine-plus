@@ -69,7 +69,7 @@ export default function NewEventPage() {
         imageUrl = publicUrlData.publicUrl;
       }
 
-      // 日付が入力されていなければしっかり null（空っぽ）にしてデータベースに送る
+      // 日付が入力されていなければ null（空っぽ）にする
       const start_at = form.startDate ? new Date(`${form.startDate}T${form.startTime || "00:00"}:00`).toISOString() : null;
       const end_at = form.endDate ? new Date(`${form.endDate}T${form.endTime || "00:00"}:00`).toISOString() : null;
       
@@ -95,9 +95,9 @@ export default function NewEventPage() {
         status: "published",
       };
 
-      // 🛠️ 安全装置：タイムアウト付きでデータベースへの保存をリクエストする
+      // 4秒の安全タイムアウト付きでデータベースへの保存をリクエスト
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 4000); // 4秒応答がなければ強制エラーにする
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
 
       const { error: insertError } = await supabase
         .from("events")
@@ -110,7 +110,7 @@ export default function NewEventPage() {
         throw new Error(`Supabase保存拒否エラー: ${insertError.message} (${insertError.code})`);
       }
 
-      // 通知はAPI経由でバックグラウンド送信
+      // 🎉 Discordへの新着通知機能を完全復活！（API窓口へシュート）
       fetch("/api/notify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -121,11 +121,11 @@ export default function NewEventPage() {
         }),
       }).catch((err) => console.error("❌ 通知API呼び出しに失敗:", err));
 
+      // ユーザーをホームへ戻す
       router.push("/");
       router.refresh();
     } catch (err: any) {
       console.error("投稿エラーの詳細:", err);
-      // 送信中を解除し、赤いボックスでエラー内容を画面に叩きつける
       setError(err.message || "予期せぬエラーが発生しました");
       setLoading(false);
     }
