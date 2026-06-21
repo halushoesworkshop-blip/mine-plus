@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import Link from "next/link"; // ここにLinkを追加しました
+import Link from "next/link";
 import {
   format,
   addMonths,
@@ -37,8 +37,9 @@ export default function EventCalendar({ events }: { events: any[] }) {
   const startDate = startOfWeek(monthStart);
   const endDate = endOfWeek(monthEnd);
 
+  // 🌟 修正ポイント1： parseISO に入れる前に e.start_at が存在するかチェックする
   const selectedDateEvents = selectedDate
-    ? events.filter((e) => isSameDay(parseISO(e.start_at), selectedDate))
+    ? events.filter((e) => e.start_at && isSameDay(parseISO(e.start_at), selectedDate))
     : [];
 
   return (
@@ -77,7 +78,8 @@ export default function EventCalendar({ events }: { events: any[] }) {
             while (day <= endDate) {
               for (let i = 0; i < 7; i++) {
                 const cloneDay = day;
-                const dayEvents = events.filter((e) => isSameDay(parseISO(e.start_at), cloneDay));
+                // 🌟 修正ポイント2： ここでも parseISO の前に e.start_at があるかチェック
+                const dayEvents = events.filter((e) => e.start_at && isSameDay(parseISO(e.start_at), cloneDay));
                 const isSelected = selectedDate && isSameDay(day, selectedDate);
                 const isToday = isSameDay(day, new Date());
 
@@ -128,7 +130,6 @@ export default function EventCalendar({ events }: { events: any[] }) {
               const eventDate = new Date(safeDateString);
 
               return (
-                // ここを div から Link に変更し、ホバー時のスタイルも追加しました
                 <Link 
                   href={`/events/${event.id}`} 
                   key={event.id} 
