@@ -69,7 +69,6 @@ export default function NewEventPage() {
         imageUrl = publicUrlData.publicUrl;
       }
 
-      // 日付が入力されていなければ null（空っぽ）にする
       const start_at = form.startDate ? new Date(`${form.startDate}T${form.startTime || "00:00"}:00`).toISOString() : null;
       const end_at = form.endDate ? new Date(`${form.endDate}T${form.endTime || "00:00"}:00`).toISOString() : null;
       
@@ -95,7 +94,6 @@ export default function NewEventPage() {
         status: "published",
       };
 
-      // 4秒の安全タイムアウト付きでデータベースへの保存をリクエスト
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 4000);
 
@@ -110,8 +108,11 @@ export default function NewEventPage() {
         throw new Error(`Supabase保存拒否エラー: ${insertError.message} (${insertError.code})`);
       }
 
-      // 🎉 Discordへの新着通知機能を完全復活！（API窓口へシュート）
-      fetch("/api/notify", {
+      // 🌟 APIの呼び出し先URLを本番環境のドメインに自動で追従する形に修正
+      const targetUrl = `${window.location.origin}/api/notify`;
+      console.log("=== 通知APIを呼び出します URL:", targetUrl);
+
+      fetch(targetUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -121,7 +122,6 @@ export default function NewEventPage() {
         }),
       }).catch((err) => console.error("❌ 通知API呼び出しに失敗:", err));
 
-      // ユーザーをホームへ戻す
       router.push("/");
       router.refresh();
     } catch (err: any) {

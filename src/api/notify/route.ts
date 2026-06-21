@@ -1,13 +1,17 @@
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
+  console.log("=== [APIログ] 通知を受け取りました ===");
   try {
     const { title, category, location } = await request.json();
     const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
 
+    // 🔍 鍵が正しく読み込めているかVercelのログに出力させる
     if (!webhookUrl) {
-      console.error("❌ DISCORD_WEBHOOK_URL が設定されていません。");
+      console.error("❌ [APIログエラー] DISCORD_WEBHOOK_URL が空っぽです！Vercelに設定されていません。");
       return NextResponse.json({ error: "Configuration error" }, { status: 500 });
+    } else {
+      console.log("💡 [APIログ] Webhook URLの取得に成功しました。文字数:", webhookUrl.length);
     }
 
     const message = {
@@ -15,11 +19,10 @@ export async function POST(request: Request) {
     };
 
     const controller = new AbortController();
-    // Discordへの送信完了を最大2秒だけ待つように制限
-    const timeoutId = setTimeout(() => controller.abort(), 2000);
+    const timeoutId = setTimeout(() => controller.abort(), 3000); // 猶予を3秒に少し延長
 
     try {
-      // 🌟 await することで、Vercelが送信途中でコンテナを強制終了させるのを防ぎます
+      console.log("=== [APIログ] Discordへリクエストを送信します ===");
       const response = await fetch(webhookUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -27,12 +30,12 @@ export async function POST(request: Request) {
         signal: controller.signal
       });
       
-      console.log("=== Discord通知送信結果ステータス:", response.status);
+      console.log("=== [APIログ] Discord送信結果ステータス:", response.status);
     } catch (fetchErr: any) {
       if (fetchErr.name === 'AbortError') {
-        console.warn("⚠️ Discord通知：2秒以内に応答がなかったためタイムアウトしました");
+        console.error("❌ [APIログエラー] Discordへの送信がタイムアウト（3秒）しました");
       } else {
-        console.error("❌ Discordへの送信エラー:", fetchErr);
+        console.error("❌ [APIログエラー] Discordへの送信中に通信障害が発生しました:", fetchErr);
       }
     } finally {
       clearTimeout(timeoutId);
@@ -40,7 +43,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("❌ API Routeの処理エラー:", error);
+    console.error("❌ [APIログエラー] 致命的な処理例外が発生しました:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
