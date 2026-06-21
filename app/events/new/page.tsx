@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { createSupabaseBrowserClient } from "@/src/utils/supabase/client";
-// 先ほど作った通知ロボットを読み込む
+// 通知ロボットの読み込み
 import { sendDiscordNotification } from "./notify";
 
 type EventCategory = "music" | "sports" | "food" | "art" | "festival" | "workshop" | "market" | "other";
@@ -100,9 +100,11 @@ export default function NewEventPage() {
       const { error: insertError } = await supabase.from("events").insert(payload);
       if (insertError) throw new Error(`保存エラー: ${insertError.message}`);
 
-      // 2. Discordに通知を送信（失敗してもユーザーの画面はエラーにしない）
-      await sendDiscordNotification(form.title, categoryLabels[form.category], form.location);
+      // 2. Discordに通知を送信（awaitを外し、結果を待たずに投げっぱなす）
+      sendDiscordNotification(form.title, categoryLabels[form.category], form.location)
+        .catch(err => console.error("Discord通知の裏側エラー:", err));
 
+      // 3. ユーザーの画面は即座にホームへ戻す
       router.push("/");
       router.refresh();
     } catch (err: any) {
@@ -111,7 +113,6 @@ export default function NewEventPage() {
     }
   }
 
-  // ーーー ここから下の見た目（HTML）は一切変更していません ーーー
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <main className="mx-auto w-full max-w-2xl px-6 py-10 md:px-10 md:py-14">
