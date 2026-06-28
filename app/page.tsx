@@ -32,14 +32,27 @@ export default async function Home(props: { searchParams: Promise<{ category?: s
   const searchParams = await props.searchParams;
   const selectedCategory = searchParams.category;
 
-  // 1. すべてのイベントを取得（カレンダー内のポッチ表示や全体の管理用）
+  // 1. すべてのイベントを取得（カレンダーには過去の記録も残すため全取得）
   const { data: allEventsData } = await supabase.from("events").select("*").order("start_at", { ascending: true });
   const allEvents = allEventsData || [];
   
-  // 2. 選択されたカテゴリで絞り込む（リスト・カレンダー表示用）
+  // 2. 選択されたカテゴリで絞り込む
   const filteredEvents = selectedCategory 
     ? allEvents.filter(event => event.category === selectedCategory)
     : allEvents;
+
+  // 🌟 3. 新規追加：タイムライン用に「今日以降」または「未定」のイベントだけを抽出する
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // 今日の00:00:00を基準にする
+
+  const timelineEvents = filteredEvents.filter(event => {
+    // 日付が「任意（未定）」で空っぽのものは、これからの予定として表示する
+    if (!event.start_at) return true;
+    
+    // 過去のイベントなら除外、今日以降なら表示する
+    const eventDate = new Date(event.start_at);
+    return eventDate >= today;
+  });
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-slate-900 font-sans selection:bg-lime-300">
@@ -51,6 +64,7 @@ export default async function Home(props: { searchParams: Promise<{ category?: s
           
           {/* カレンダーエリア */}
           <div className="w-full">
+            {/* カレンダーには過去も含めた filteredEvents を渡す */}
             <EventCalendar events={filteredEvents} />
           </div>
 
@@ -62,7 +76,8 @@ export default async function Home(props: { searchParams: Promise<{ category?: s
             </h2>
             
             <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
-              {filteredEvents.length > 0 ? filteredEvents.map(event => (
+              {/* 🌟 ここを filteredEvents から timelineEvents に変更して過去を隠す */}
+              {timelineEvents.length > 0 ? timelineEvents.map(event => (
                 <Link 
                   href={`/events/${event.id}`} 
                   key={event.id} 
@@ -79,7 +94,6 @@ export default async function Home(props: { searchParams: Promise<{ category?: s
                   </h3>
                   
                   <div className="flex flex-col gap-1 text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                    {/* ここで新しくなった時間フォーマット関数を呼び出しています */}
                     <span className="flex items-center gap-2 italic">Date : {formatEventDate(event.start_at)}</span>
                     <span className="flex items-center gap-2 italic max-w-full truncate">Loc : {event.location}</span>
                   </div>

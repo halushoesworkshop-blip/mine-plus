@@ -119,7 +119,6 @@ export default function EventCalendar({ events }: { events: any[] }) {
       <div className="rounded-[32px] bg-white p-6 border border-slate-100 shadow-sm transition-all animate-in fade-in slide-in-from-top-2">
         <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-300 mb-4 flex justify-between items-center">
           <span>Schedule / {selectedDate ? format(selectedDate, "M月d日", { locale: ja }) : "Select Date"}</span>
-          <span className="text-lime-600 italic">[{selectedDateEvents.length} Items]</span>
         </h3>
         
         <div className="space-y-3">
